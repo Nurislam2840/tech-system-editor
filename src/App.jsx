@@ -134,7 +134,6 @@ function App() {
     });
   };
 
-  // === মোবাইল কাস্টম কীবোর্ড অ্যাকশন ===
   const handleMobileDelete = () => {
     if (editorRef.current) {
       const position = editorRef.current.getPosition();
@@ -149,7 +148,6 @@ function App() {
       const lineContent = model.getLineContent(position.lineNumber);
       
       if (lineContent.trim() === '' && position.lineNumber > 1) {
-        // ফাঁকা লাইন ডিলিট
         const prevLineLength = model.getLineMaxColumn(position.lineNumber - 1);
         editorRef.current.executeEdits('', [{
           range: new monacoRef.current.Range(position.lineNumber - 1, prevLineLength, position.lineNumber, 1),
@@ -157,12 +155,10 @@ function App() {
         }]);
         editorRef.current.setPosition({ lineNumber: position.lineNumber - 1, column: prevLineLength });
       } else if (position.column > 1) {
-        // সাধারণ অক্ষর ডিলিট
         const range = new monacoRef.current.Range(position.lineNumber, position.column - 1, position.lineNumber, position.column);
         editorRef.current.executeEdits('', [{ range: range, text: '' }]);
         editorRef.current.setPosition({ lineNumber: position.lineNumber, column: position.column - 1 });
       } else if (position.lineNumber > 1) {
-        // লাইনের শুরুতে থাকলে আগের লাইনের সাথে জোড়া লাগবে
         const prevLineLength = model.getLineMaxColumn(position.lineNumber - 1);
         editorRef.current.executeEdits('', [{
           range: new monacoRef.current.Range(position.lineNumber - 1, prevLineLength, position.lineNumber, 1),
@@ -189,7 +185,6 @@ function App() {
     editorRef.current = editor;
     monacoRef.current = monaco;
 
-    // কনটেক্সট মেনু
     editor.onContextMenu((e) => {
       e.event.preventDefault();
       const selection = editor.getSelection();
@@ -326,7 +321,6 @@ function App() {
                 />
               </div>
 
-              {/* মোবাইল কাস্টম কীবোর্ড টুলবার */}
               <div className="mobile-keyboard-toolbar">
                 <button onClick={() => editorRef.current.trigger('keyboard', 'undo')}><FiChevronsLeft /></button>
                 <button onClick={handleMobileTab}>Tab</button>
