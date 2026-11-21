@@ -1,10 +1,12 @@
 import React, { useState, useEffect, useRef } from 'react';
 import Editor from '@monaco-editor/react';
 import localforage from 'localforage';
+import JSZip from 'jszip'; // জিপ ফাইলের জন্য
 import { 
   FiCode, FiSave, FiFolder, FiMenu, FiPlus, FiUpload, 
   FiX, FiPlay, FiSettings, FiCheckCircle, FiAlertCircle, 
-  FiDelete, FiCornerDownLeft, FiChevronsLeft, FiSun, FiMoon, FiSearch 
+  FiDelete, FiCornerDownLeft, FiChevronsLeft, FiSun, FiMoon, FiSearch,
+  FiDownloadCloud, FiCopy, FiScissors, FiClipboard, FiTerminal
 } from 'react-icons/fi';
 import './App.css';
 
@@ -18,10 +20,14 @@ function App() {
   const [fontSize, setFontSize] = useState(14);
   const [searchQuery, setSearchQuery] = useState('');
   
+  // কনসোল লগ স্টেট
+  const [consoleLogs, setConsoleLogs] = useState([]);
+  const [showConsole, setShowConsole] = useState(false);
+  
   const [alertConfig, setAlertConfig] = useState({ 
     visible: false, type: 'success', title: '', message: '', isPrompt: false, inputValue: '', onConfirm: null 
   });
-  const [contextMenu, setContextMenu] = useState({ visible: false, x: 0, y: 0 });
+  const [contextMenu, setContextMenu] = useState({ visible: false, x: 0, y: 0, hasSelection: false });
   
   const fileInputRef = useRef(null);
   const editorRef = useRef(null);
@@ -39,9 +45,9 @@ function App() {
         setActiveFileId(savedFiles[0].id);
       } else {
         const defaultFiles = [
-          { id: '1', name: 'index.html', language: 'html', content: '<!DOCTYPE html>\n<html>\n<body>\n  <h1 style="color: #38bdf8;">Hello Tech System!</h1>\n</body>\n</html>' },
+          { id: '1', name: 'index.html', language: 'html', content: '<!DOCTYPE html>\n<html>\n<body>\n  <h1 style="color: #38bdf8;">Hello Tech System!</h1>\n  <button onclick="testLog()">Click Me</button>\n</body>\n</html>' },
           { id: '2', name: 'style.css', language: 'css', content: 'body {\n  background: #0f172a;\n  color: white;\n  font-family: "Outfit", sans-serif;\n}' },
-          { id: '3', name: 'app.js', language: 'javascript', content: 'console.log("App Running...");\n// Write your code here' }
+          { id: '3', name: 'app.js', language: 'javascript', content: 'console.log("App Running...");\nfunction testLog() {\n  console.log("Button clicked at: " + new Date().toLocaleTimeString());\n}' }
         ];
         setFiles(defaultFiles);
         setActiveFileId('1');
@@ -110,6 +116,22 @@ function App() {
     }
   };
 
+  // জিপ ফাইলে সব ফাইল ডাউনলোড
+  const handleExportZip = async () => {
+    const zip = new JSZip();
+    files.forEach(file => {
+      zip.file(file.name, file.content);
+    });
+    const content = await zip.generateAsync({ type: "blob" });
+    const url = URL.createObjectURL(content);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = "tech-system-project.zip";
+    a.click();
+    URL.revokeObjectURL(url);
+    showCustomAlert('success', 'Exported!', 'Project exported as ZIP successfully.');
+  };
+
   const handleCreateNewFile = () => {
     showCustomAlert('info', 'New File', 'Enter file name (e.g. script.js):', true, (fileName) => {
       if (!fileName) return;
@@ -135,6 +157,46 @@ function App() {
       if (newFiles.length > 0) setActiveFileId(newFiles[0].id);
       else setActiveFileId(null);
     });
+  };
+
+  // টেক্সট কপি, কাট, পেস্ট
+  const handleCut = async () => {
+    if (editorRef.current) {
+      const text = editorRef.current.getModel().getValueInRange(editorRef.current.getSelection());
+      await navigator.clipboard.writeText(text);
+      editorRef.current.executeEdits('', [{ range: editorRef.current.getSelection(), text: '' }]);
+      setContextMenu({ ...contextMenu, visible: false });
+    }
+  };
+  const handleCopy = async () => {
+    if (editorRef.current) {
+      const text = editorRef.current.getModel().getValueInRange(editorRef.current.getSelection());
+      await navigator.clipboard.writeText(text);
+      setContextMenu({ ...contextMenu, visible: false });
+    }
+  };
+  const handlePaste = async () => {
+    try {
+      const text = await navigator.clipboard.readText();
+      if (editorRef.current) {
+        editorRef.current.executeEdits('', [{ range: editorRef.current.getSelection(), text: text }]);
+      }
+    } catch (err) {
+      showCustomAlert('danger', 'Paste Failed', 'Your browser does not allow paste. Please use Ctrl+V or keyboard shortcut.');
+    }
+    setContextMenu({ ...contextMenu, visible: false });
+  };
+  const handleSelectAll = () => {
+    if (editorRef.current) {
+      editorRef.current.setSelection(editorRef.current.getModel().getFullModelRange());
+    }
+    setContextMenu({ ...contextMenu, visible: false });
+  };
+  const handleDeleteSelection = () => {
+    if (editorRef.current) {
+      editorRef.current.executeEdits('', [{ range: editorRef.current.getSelection(), text: '' }]);
+      setContextMenu({ ...contextMenu, visible: false });
+    }
   };
 
   const handleMobileDelete = () => {
@@ -191,35 +253,15 @@ function App() {
     editor.onContextMenu((e) => {
       e.event.preventDefault();
       const selection = editor.getSelection();
-      if (selection && !selection.isEmpty()) {
-        const position = editor.getPosition();
-        const coords = editor.getScrolledVisiblePosition(position);
-        if (coords) setContextMenu({ visible: true, x: coords.left, y: coords.top + 30 });
+      const hasSelection = selection && !selection.isEmpty();
+      
+      const position = editor.getPosition();
+      const coords = editor.getScrolledVisiblePosition(position);
+      if (coords) {
+        setContextMenu({ visible: true, x: coords.left, y: coords.top + 30, hasSelection });
       }
     });
-    editor.onMouseDown(() => setContextMenu({ visible: false, x: 0, y: 0 }));
-  };
-
-  const handleCut = async () => {
-    if (editorRef.current) {
-      const text = editorRef.current.getModel().getValueInRange(editorRef.current.getSelection());
-      await navigator.clipboard.writeText(text);
-      editorRef.current.executeEdits('', [{ range: editorRef.current.getSelection(), text: '' }]);
-      setContextMenu({ visible: false, x: 0, y: 0 });
-    }
-  };
-  const handleCopy = async () => {
-    if (editorRef.current) {
-      const text = editorRef.current.getModel().getValueInRange(editorRef.current.getSelection());
-      await navigator.clipboard.writeText(text);
-      setContextMenu({ visible: false, x: 0, y: 0 });
-    }
-  };
-  const handleDeleteSelection = () => {
-    if (editorRef.current) {
-      editorRef.current.executeEdits('', [{ range: editorRef.current.getSelection(), text: '' }]);
-      setContextMenu({ visible: false, x: 0, y: 0 });
-    }
+    editor.onMouseDown(() => setContextMenu({ visible: false, x: 0, y: 0, hasSelection: false }));
   };
 
   const getPreviewContent = () => {
@@ -229,15 +271,40 @@ function App() {
 
     let html = htmlFile ? htmlFile.content : '<h1>No HTML File Found</h1>';
     const css = cssFile ? `<style>${cssFile.content}</style>` : '';
+    
+    // কনসোল লগ ক্যাপচার করার জন্য স্ক্রিপ্ট
+    const consoleOverride = `
+      <script>
+        (function() {
+          const originalLog = console.log;
+          console.log = function(...args) {
+            window.parent.postMessage({ type: 'CONSOLE_LOG', message: args.join(' ') }, '*');
+            originalLog.apply(console, args);
+          };
+        })();
+      <\/script>
+    `;
+
     const js = jsFile ? `<script>${jsFile.content}<\/script>` : '';
 
-    if (html.includes('</head>')) html = html.replace('</head>', `${css}</head>`);
-    else html = `<head>${css}</head>` + html;
+    if (html.includes('</head>')) html = html.replace('</head>', `${css}${consoleOverride}</head>`);
+    else html = `<head>${css}${consoleOverride}</head>` + html;
     
     if (html.includes('</body>')) html = html.replace('</body>', `${js}</body>`);
     else html = html + js;
     return html;
   };
+
+  // কনসোল মেসেজ রিসিভ
+  useEffect(() => {
+    const handleMessage = (event) => {
+      if (event.data && event.data.type === 'CONSOLE_LOG') {
+        setConsoleLogs(prev => [...prev, event.data.message]);
+      }
+    };
+    window.addEventListener('message', handleMessage);
+    return () => window.removeEventListener('message', handleMessage);
+  }, []);
 
   return (
     <div className={`app-container ${theme === 'vs-light' ? 'light-mode' : ''}`}>
@@ -256,7 +323,7 @@ function App() {
           <button className="icon-btn bg-transparent" onClick={() => setShowSettings(true)}>
             <FiSettings size={18} />
           </button>
-          <button className="icon-btn bg-transparent" onClick={() => setShowPreview(!showPreview)}>
+          <button className="icon-btn bg-transparent" onClick={() => { setShowPreview(!showPreview); setConsoleLogs([]); }}>
             <FiPlay size={18} />
           </button>
           <button className="icon-btn" onClick={handleSaveToPhone} title="Save to Phone">
@@ -285,6 +352,9 @@ function App() {
           <div className="sidebar-actions">
             <button onClick={() => fileInputRef.current.click()}>
               <FiUpload size={14} /> Open from Phone
+            </button>
+            <button onClick={handleExportZip} className="export-btn">
+              <FiDownloadCloud size={14} /> Export ZIP
             </button>
             <input type="file" ref={fileInputRef} onChange={handleFileOpen} style={{ display: 'none' }} accept=".js,.html,.css,.json,.py,.txt" />
           </div>
@@ -317,9 +387,9 @@ function App() {
                   onMount={handleEditorDidMount}
                   options={{
                     fontSize: fontSize, 
-                    lineHeight: 1.6, // নতুন প্রিমিয়াম লাইন হাইট
-                    fontLigatures: true, // কোডের চিহ্নগুলো সুন্দর দেখাবে
-                    fontFamily: "'JetBrains Mono', 'Fira Code', 'Courier New', monospace", // নতুন প্রিমিয়াম ফন্ট
+                    lineHeight: 1.6,
+                    fontLigatures: true,
+                    fontFamily: "'JetBrains Mono', 'Fira Code', monospace", 
                     minimap: { enabled: false }, 
                     wordWrap: 'off', 
                     automaticLayout: true, 
@@ -365,18 +435,44 @@ function App() {
           <div className="preview-panel">
             <div className="preview-header">
               <span>Live Preview</span>
-              <button onClick={() => setShowPreview(false)}><FiX size={14}/></button>
+              <div style={{ display: 'flex', gap: '8px' }}>
+                <button onClick={() => setShowConsole(!showConsole)} style={{ fontSize: '0.8rem' }}>
+                  <FiTerminal /> Console
+                </button>
+                <button onClick={() => setShowPreview(false)}><FiX size={14}/></button>
+              </div>
             </div>
             <iframe title="preview" srcDoc={getPreviewContent()} className="preview-iframe" sandbox="allow-scripts" />
+            
+            {showConsole && (
+              <div className="console-panel">
+                <div className="console-header">
+                  <span>Console Logs</span>
+                  <button onClick={() => setConsoleLogs([])}>Clear</button>
+                </div>
+                <div className="console-output">
+                  {consoleLogs.length === 0 ? <span style={{ color: '#64748b' }}>No logs yet...</span> : consoleLogs.map((log, i) => (
+                    <div key={i} className="log-line">{log}</div>
+                  ))}
+                </div>
+              </div>
+            )}
           </div>
         )}
       </main>
 
+      {/* Premium Context Menu */}
       {contextMenu.visible && (
         <div className="custom-context-menu" style={{ top: contextMenu.y, left: contextMenu.x }}>
-          <button onClick={handleCut}>Cut</button>
-          <button onClick={handleCopy}>Copy</button>
-          <button onClick={handleDeleteSelection} className="text-red">Delete</button>
+          {contextMenu.hasSelection && (
+            <>
+              <button onClick={handleCut}><FiScissors size={14} /> Cut</button>
+              <button onClick={handleCopy}><FiCopy size={14} /> Copy</button>
+              <button onClick={handleDeleteSelection} className="text-red"><FiX size={14} /> Delete</button>
+            </>
+          )}
+          <button onClick={handlePaste}><FiClipboard size={14} /> Paste</button>
+          <button onClick={handleSelectAll}><FiCode size={14} /> Select All</button>
         </div>
       )}
 
