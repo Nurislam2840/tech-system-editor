@@ -16,23 +16,18 @@ function App() {
   const [showSettings, setShowSettings] = useState(false);
   const [fontSize, setFontSize] = useState(14);
   
-  // কাস্টম পপআপ স্টেট
   const [alertConfig, setAlertConfig] = useState({ 
     visible: false, type: 'success', title: '', message: '', isPrompt: false, inputValue: '', onConfirm: null 
   });
-
-  // কাস্টম মোবাইল মেনুর জন্য স্টেট
   const [contextMenu, setContextMenu] = useState({ visible: false, x: 0, y: 0 });
   
   const fileInputRef = useRef(null);
   const editorRef = useRef(null);
   const monacoRef = useRef(null);
 
-  // কাস্টম অ্যালার্ট ফাংশন
   const showCustomAlert = (type, title, message, isPrompt = false, onConfirm = null) => {
     setAlertConfig({ visible: true, type, title, message, isPrompt, inputValue: '', onConfirm });
   };
-
   const closeAlert = () => setAlertConfig(prev => ({ ...prev, visible: false }));
 
   useEffect(() => {
@@ -53,28 +48,22 @@ function App() {
   }, []);
 
   useEffect(() => {
-    if (files.length > 0) {
-      localforage.setItem('techSystemFiles', files);
-    }
+    if (files.length > 0) localforage.setItem('techSystemFiles', files);
   }, [files]);
 
   const activeFile = files.find(f => f.id === activeFileId);
 
   const handleCodeChange = (newCode) => {
-    setFiles(prev => prev.map(f => 
-      f.id === activeFileId ? { ...f, content: newCode } : f
-    ));
+    setFiles(prev => prev.map(f => f.id === activeFileId ? { ...f, content: newCode } : f));
   };
 
   const handleFileOpen = (e) => {
     const file = e.target.files[0];
     if (!file) return;
-
     const reader = new FileReader();
     reader.onload = (event) => {
       const content = event.target.result;
       const extension = file.name.split('.').pop().toLowerCase();
-      
       let lang = 'plaintext';
       if (['js', 'jsx', 'ts', 'tsx'].includes(extension)) lang = 'javascript';
       else if (extension === 'html') lang = 'html';
@@ -93,7 +82,6 @@ function App() {
 
   const handleSaveToPhone = async () => {
     if (!activeFile) return;
-
     try {
       if ('showSaveFilePicker' in window) {
         const fileHandle = await window.showSaveFilePicker({
@@ -119,7 +107,6 @@ function App() {
     }
   };
 
-  // নতুন ফাইল তৈরি (কাস্টম প্রম্পট দিয়ে)
   const handleCreateNewFile = () => {
     showCustomAlert('info', 'New File', 'Enter file name (e.g. script.js):', true, (fileName) => {
       if (!fileName) return;
@@ -137,7 +124,6 @@ function App() {
     });
   };
 
-  // ফাইল ডিলিট (কাস্টম অ্যালার্ট দিয়ে)
   const handleDeleteFile = (id, e) => {
     e.stopPropagation();
     showCustomAlert('danger', 'Close File', 'Are you sure you want to close this file? Unsaved changes will be lost.', false, () => {
@@ -151,6 +137,21 @@ function App() {
   const handleEditorDidMount = (editor, monaco) => {
     editorRef.current = editor;
     monacoRef.current = monaco;
+
+    // মোবাইলে Backspace ফিক্স (লাইন ডিলিট হলে আগের লাইনে যাওয়ার জন্য)
+    editor.addCommand(monaco.KeyCode.Backspace, () => {
+      const position = editor.getPosition();
+      const model = editor.getModel();
+      const lineContent = model.getLineContent(position.lineNumber);
+      
+      if (lineContent.trim() === '' && position.column === 1 && position.lineNumber > 1) {
+        // যদি ফাঁকা লাইনে থাকেন, তবে আগের লাইনের শেষে নিয়ে যাবে
+        editor.setPosition({ lineNumber: position.lineNumber - 1, column: model.getLineMaxColumn(position.lineNumber - 1) });
+        editor.trigger('keyboard', 'deleteLeft', {});
+      } else {
+        editor.trigger('keyboard', 'deleteLeft', {});
+      }
+    });
 
     editor.onContextMenu((e) => {
       e.event.preventDefault();
@@ -205,8 +206,6 @@ function App() {
 
   return (
     <div className={`app-container ${theme === 'vs-light' ? 'light-mode' : ''}`}>
-      
-      {/* Top Bar */}
       <header className="top-bar">
         <div className="logo">
           <button className="menu-btn" onClick={() => setSidebarOpen(!sidebarOpen)}>
@@ -263,7 +262,24 @@ function App() {
                 <Editor
                   height="100%" language={activeFile.language} value={activeFile.content} onChange={handleCodeChange} theme={theme} onMount={handleEditorDidMount}
                   options={{
-                    fontSize: fontSize, fontFamily: "'Fira Code', 'Courier New', monospace", minimap: { enabled: false }, wordWrap: 'off', automaticLayout: true, lineNumbers: 'on', formatOnPaste: true, formatOnType: true, autoIndent: 'full', tabSize: 2, readOnly: false, domReadOnly: false, mouseWheelZoom: true, contextmenu: false, selectOnLineNumbers: true, cursorBlinking: 'smooth', semanticHighlighting: { enabled: true }, bracketPairColorization: { enabled: true },
+                    fontSize: fontSize, 
+                    fontFamily: "'Fira Code', 'Courier New', monospace", 
+                    minimap: { enabled: false }, 
+                    wordWrap: 'off', 
+                    automaticLayout: true, 
+                    lineNumbers: 'on', 
+                    formatOnPaste: true, 
+                    formatOnType: true, 
+                    autoIndent: 'none', // মোবাইলে অটো-ইন্ডেন্ট বন্ধ করা হলো
+                    tabSize: 2, 
+                    readOnly: false, 
+                    domReadOnly: false, 
+                    mouseWheelZoom: true, 
+                    contextmenu: false, 
+                    selectOnLineNumbers: true, 
+                    cursorBlinking: 'smooth', 
+                    semanticHighlighting: { enabled: true }, 
+                    bracketPairColorization: { enabled: true },
                   }}
                 />
               </div>
@@ -296,7 +312,6 @@ function App() {
         </div>
       )}
 
-      {/* Premium Custom Alert Modal */}
       {alertConfig.visible && (
         <div className="modal-overlay">
           <div className="custom-alert-box">
@@ -308,12 +323,8 @@ function App() {
             
             {alertConfig.isPrompt && (
               <input 
-                type="text" 
-                className="alert-input" 
-                placeholder="filename.js" 
-                value={alertConfig.inputValue}
-                onChange={(e) => setAlertConfig({...alertConfig, inputValue: e.target.value})}
-                autoFocus
+                type="text" className="alert-input" placeholder="filename.js" value={alertConfig.inputValue}
+                onChange={(e) => setAlertConfig({...alertConfig, inputValue: e.target.value})} autoFocus
               />
             )}
 
@@ -328,7 +339,6 @@ function App() {
         </div>
       )}
 
-      {/* Settings Modal */}
       {showSettings && (
         <div className="modal-overlay">
           <div className="modal-content">
