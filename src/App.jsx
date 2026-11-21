@@ -3,7 +3,7 @@ import Editor from '@monaco-editor/react';
 import localforage from 'localforage';
 import { 
   FiCode, FiSave, FiFolder, FiMenu, FiPlus, FiUpload, 
-  FiX, FiSun, FiMoon, FiPlay, FiSettings, FiCheckCircle, FiAlertCircle
+  FiX, FiPlay, FiSettings, FiCheckCircle, FiAlertCircle
 } from 'react-icons/fi';
 import './App.css';
 
@@ -23,7 +23,6 @@ function App() {
   
   const fileInputRef = useRef(null);
   const editorRef = useRef(null);
-  const monacoRef = useRef(null);
 
   const showCustomAlert = (type, title, message, isPrompt = false, onConfirm = null) => {
     setAlertConfig({ visible: true, type, title, message, isPrompt, inputValue: '', onConfirm });
@@ -136,16 +135,14 @@ function App() {
 
   const handleEditorDidMount = (editor, monaco) => {
     editorRef.current = editor;
-    monacoRef.current = monaco;
 
-    // মোবাইলে Backspace ফিক্স (লাইন ডিলিট হলে আগের লাইনে যাওয়ার জন্য)
+    // মোবাইলে Backspace ফিক্স
     editor.addCommand(monaco.KeyCode.Backspace, () => {
       const position = editor.getPosition();
       const model = editor.getModel();
       const lineContent = model.getLineContent(position.lineNumber);
       
       if (lineContent.trim() === '' && position.column === 1 && position.lineNumber > 1) {
-        // যদি ফাঁকা লাইনে থাকেন, তবে আগের লাইনের শেষে নিয়ে যাবে
         editor.setPosition({ lineNumber: position.lineNumber - 1, column: model.getLineMaxColumn(position.lineNumber - 1) });
         editor.trigger('keyboard', 'deleteLeft', {});
       } else {
@@ -270,7 +267,7 @@ function App() {
                     lineNumbers: 'on', 
                     formatOnPaste: true, 
                     formatOnType: true, 
-                    autoIndent: 'none', // মোবাইলে অটো-ইন্ডেন্ট বন্ধ করা হলো
+                    autoIndent: 'none',
                     tabSize: 2, 
                     readOnly: false, 
                     domReadOnly: false, 
