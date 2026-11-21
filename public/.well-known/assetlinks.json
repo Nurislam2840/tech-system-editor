@@ -1,1 +1,8 @@
-[]
+[{
+  "relation": ["delegate_permission/common.handle_all_urls"],
+  "target": {
+    "namespace": "android_app",
+    "package_name": "com.nurislam.techsystem",
+    "sha256_cert_fingerprints": ["D5:13:B8:7C:0E:98:2F:B1:E4:6F:79:30:40:23:E4:F4:A5:8B:5A:48:63:22:C6:D1:A7:8C:D9:F0:74:2E:B5:0A"]
+  }
+}]
