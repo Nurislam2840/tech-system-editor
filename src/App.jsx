@@ -136,45 +136,34 @@ function App() {
   const handleEditorDidMount = (editor, monaco) => {
     editorRef.current = editor;
 
-    // মোবাইলের জন্য নিখুঁত Backspace লজিক
-    editor.addCommand(monaco.KeyCode.Backspace, () => {
-      const position = editor.getPosition();
-      const model = editor.getModel();
-      const selection = editor.getSelection();
+    // মোবাইলে Backspace ঠিকমতো কাজ করার জন্য onKeyDown ইভেন্ট
+    editor.onKeyDown((e) => {
+      if (e.keyCode === monaco.KeyCode.Backspace) {
+        const position = editor.getPosition();
+        const model = editor.getModel();
+        const selection = editor.getSelection();
 
-      // যদি কিছু সিলেক্ট করা থাকে, তবে সেটি মুছে ফেলবে
-      if (selection && !selection.isEmpty()) {
-        editor.executeEdits('', [{ range: selection, text: '' }]);
-        return;
-      }
+        // যদি কিছু সিলেক্ট করা থাকে, তবে সেটি মুছে ফেলবে
+        if (selection && !selection.isEmpty()) {
+          return; // ডিফল্ট ডিলিট কাজ করবে
+        }
 
-      const lineContent = model.getLineContent(position.lineNumber);
-
-      // যদি ফাঁকা লাইনে থাকেন
-      if (lineContent.trim() === '' && position.lineNumber > 1) {
-        const prevLineLength = model.getLineMaxColumn(position.lineNumber - 1);
-        editor.executeEdits('', [{
-          range: new monaco.Range(position.lineNumber - 1, prevLineLength, position.lineNumber, 1),
-          text: ''
-        }]);
-        editor.setPosition({ lineNumber: position.lineNumber - 1, column: prevLineLength });
-      } else if (position.column > 1) {
-        // সাধারণ অক্ষর মুছবে
-        const range = new monaco.Range(position.lineNumber, position.column - 1, position.lineNumber, position.column);
-        editor.executeEdits('', [{ range: range, text: '' }]);
-        editor.setPosition({ lineNumber: position.lineNumber, column: position.column - 1 });
-      } else if (position.lineNumber > 1) {
-        // লাইনের একদম শুরুতে থাকলে আগের লাইনের সাথে জোড়া লাগবে
-        const prevLineLength = model.getLineMaxColumn(position.lineNumber - 1);
-        editor.executeEdits('', [{
-          range: new monaco.Range(position.lineNumber - 1, prevLineLength, position.lineNumber, 1),
-          text: ''
-        }]);
-        editor.setPosition({ lineNumber: position.lineNumber - 1, column: prevLineLength });
+        const lineContent = model.getLineContent(position.lineNumber);
+        
+        // যদি ফাঁকা লাইনে থাকেন (এবং প্রথম লাইন না হয়)
+        if (lineContent.trim() === '' && position.lineNumber > 1) {
+          e.preventDefault(); // ডিফল্ট ডিলিট বন্ধ
+          const prevLineLength = model.getLineMaxColumn(position.lineNumber - 1);
+          editor.executeEdits('', [{
+            range: new monaco.Range(position.lineNumber - 1, prevLineLength, position.lineNumber, 1),
+            text: ''
+          }]);
+          editor.setPosition({ lineNumber: position.lineNumber - 1, column: prevLineLength });
+        }
       }
     });
 
-    // মোবাইলে টেক্সট সিলেক্ট করলে কাস্টম মেনু
+    // মোবাইলে টেক্সট সিলেক্ট করলে কাস্টম মেনু দেখানোর ইভেন্ট
     editor.onContextMenu((e) => {
       e.event.preventDefault();
       const selection = editor.getSelection();
@@ -184,6 +173,7 @@ function App() {
         if (coords) setContextMenu({ visible: true, x: coords.left, y: coords.top + 30 });
       }
     });
+    
     editor.onMouseDown(() => setContextMenu({ visible: false, x: 0, y: 0 }));
   };
 
@@ -282,17 +272,24 @@ function App() {
               <div className="editor-header"><span>{activeFile.name}</span></div>
               <div className="editor-wrapper">
                 <Editor
-                  height="100%" language={activeFile.language} value={activeFile.content} onChange={handleCodeChange} theme={theme} onMount={handleEditorDidMount}
+                  height="100%" 
+                  language={activeFile.language} 
+                  value={activeFile.content} 
+                  onChange={handleCodeChange} 
+                  theme={theme} 
+                  onMount={handleEditorDidMount}
                   options={{
                     fontSize: fontSize, 
                     fontFamily: "'Fira Code', 'Courier New', monospace", 
                     minimap: { enabled: false }, 
-                    wordWrap: 'off', // লাইন ভাঙা বন্ধ
+                    wordWrap: 'off', 
                     automaticLayout: true, 
                     lineNumbers: 'on', 
-                    formatOnPaste: true, 
-                    formatOnType: true, 
-                    autoIndent: 'none', // মোবাইলে অটো-ইন্ডেন্ট বন্ধ
+                    formatOnPaste: false, 
+                    formatOnType: false, 
+                    autoIndent: 'none', 
+                    autoClosingBrackets: 'never', 
+                    autoClosingQuotes: 'never', 
                     tabSize: 2, 
                     readOnly: false, 
                     domReadOnly: false, 
