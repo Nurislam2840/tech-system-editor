@@ -1,4 +1,5 @@
 {
+  "id": "/",
   "name": "Tech System Editor",
   "short_name": "Tech System",
   "description": "Premium Web Code Editor for Mobile",
@@ -19,6 +20,22 @@
       "sizes": "512x512",
       "type": "image/png",
       "purpose": "any maskable"
+    }
+  ],
+  "screenshots": [
+    {
+      "src": "https://cdn-icons-png.flaticon.com/512/1005/1005141.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "form_factor": "wide",
+      "label": "Tech System Editor Screen"
+    },
+    {
+      "src": "https://cdn-icons-png.flaticon.com/512/1005/1005141.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "form_factor": "narrow",
+      "label": "Tech System Editor Mobile"
     }
   ]
 }
