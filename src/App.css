@@ -15,36 +15,28 @@ body, html, #root {
   user-select: none;
 }
 
-/* Fixed Layout for Mobile Keyboard */
 .app-container {
-  display: flex;
-  flex-direction: column;
-  position: fixed; /* মোবাইলে কীবোর্ডের সাথে ফিক্স করার জন্য */
-  top: 0;
-  bottom: 0;
-  left: 0;
-  right: 0;
-  width: 100vw;
-  background-color: #0f172a;
-  color: #e2e8f0;
+  display: flex; flex-direction: column;
+  position: fixed; top: 0; bottom: 0; left: 0; right: 0;
+  width: 100vw; background-color: #0f172a; color: #e2e8f0;
   transition: all 0.3s ease;
 }
 
+/* Light Mode */
 .app-container.light-mode { background-color: #f8fafc; color: #1e293b; }
 .light-mode .top-bar, .light-mode .sidebar, .light-mode .status-bar, .light-mode .preview-panel, .light-mode .modal-content, .light-mode .custom-alert-box, .light-mode .mobile-keyboard-toolbar {
-  background: rgba(255, 255, 255, 0.95) !important; border-color: rgba(0, 0, 0, 0.1) !important;
+  background: #ffffff !important; border-color: #e2e8f0 !important; color: #1e293b !important;
 }
-.light-mode .logo h1 { color: #0f172a; }
-.light-mode .editor-header, .light-mode .preview-header { background: #e2e8f0; color: #333; }
-.light-mode .mobile-keyboard-toolbar button { background: rgba(0,0,0,0.05); color: #333; border-color: rgba(0,0,0,0.1); }
+.light-mode .logo h1, .light-mode .file-list li, .light-mode .custom-alert-box h3 { color: #0f172a !important; }
+.light-mode .editor-header, .light-mode .preview-header { background: #f1f5f9 !important; color: #334155 !important; border-bottom: 1px solid #e2e8f0; }
+.light-mode .mobile-keyboard-toolbar button { background: #f1f5f9; color: #334155; border-color: #cbd5e1; }
+.light-mode .mobile-keyboard-toolbar button.delete-btn { background: #fee2e2; color: #ef4444; border-color: #fca5a5; }
+.light-mode .icon-btn.bg-transparent { border-color: #cbd5e1; color: #334155; }
+.light-mode .alert-input { background: #f8fafc; color: #0f172a; border-color: #cbd5e1; }
+.light-mode .custom-alert-box p { color: #64748b !important; }
 
 /* Top Bar */
-.top-bar {
-  display: flex; justify-content: space-between; align-items: center;
-  background: rgba(30, 41, 59, 0.7); backdrop-filter: blur(12px);
-  padding: 8px 12px; border-bottom: 1px solid rgba(255, 255, 255, 0.05);
-  height: 56px; flex-shrink: 0; z-index: 20;
-}
+.top-bar { display: flex; justify-content: space-between; align-items: center; background: rgba(30, 41, 59, 0.7); backdrop-filter: blur(12px); padding: 8px 12px; border-bottom: 1px solid rgba(255, 255, 255, 0.05); height: 56px; flex-shrink: 0; z-index: 20; }
 .logo { display: flex; align-items: center; gap: 8px; }
 .menu-btn { background: none; border: none; color: inherit; display: flex; align-items: center; }
 .logo-icon { color: #38bdf8; }
@@ -57,11 +49,18 @@ body, html, #root {
 .main-content { display: flex; flex: 1; position: relative; overflow: hidden; }
 
 /* Sidebar */
-.sidebar { position: absolute; left: -220px; top: 0; bottom: 0; width: 220px; background: rgba(15, 23, 42, 0.95); backdrop-filter: blur(10px); border-right: 1px solid rgba(255, 255, 255, 0.05); display: flex; flex-direction: column; transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1); z-index: 15; }
-.sidebar.open { transform: translateX(220px); }
+.sidebar { position: absolute; left: -240px; top: 0; bottom: 0; width: 240px; background: rgba(15, 23, 42, 0.95); backdrop-filter: blur(10px); border-right: 1px solid rgba(255, 255, 255, 0.05); display: flex; flex-direction: column; transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1); z-index: 15; }
+.sidebar.open { transform: translateX(240px); }
 .overlay { position: absolute; inset: 0; background: rgba(0, 0, 0, 0.5); z-index: 10; }
 .sidebar-header { padding: 12px 16px; font-size: 0.75rem; font-weight: 600; color: #64748b; display: flex; align-items: center; justify-content: space-between; }
 .new-file-btn { background: none; border: none; color: inherit; padding: 4px; }
+
+/* Search Bar */
+.sidebar-search { display: flex; align-items: center; gap: 8px; padding: 0 12px 12px; }
+.sidebar-search input { flex: 1; background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.1); padding: 6px 10px; border-radius: 6px; color: white; font-size: 0.8rem; outline: none; }
+.sidebar-search input:focus { border-color: #38bdf8; }
+.light-mode .sidebar-search input { background: #f1f5f9; border-color: #cbd5e1; color: #0f172a; }
+
 .sidebar-actions { padding: 0 12px 12px; }
 .sidebar-actions button { width: 100%; padding: 8px; background: rgba(56, 189, 248, 0.1); color: #38bdf8; border: 1px dashed #38bdf8; border-radius: 6px; display: flex; align-items: center; justify-content: center; gap: 6px; font-size: 0.75rem; }
 .file-list { list-style: none; padding: 0 8px; overflow-y: auto; flex: 1; }
@@ -82,7 +81,6 @@ body, html, #root {
   background: rgba(30, 41, 59, 0.95); padding: 8px 6px;
   border-top: 1px solid rgba(255, 255, 255, 0.1);
   flex-shrink: 0; gap: 6px; z-index: 20;
-  /* এটি নিশ্চিত করবে যে কীবোর্ড ওপেন হলেও টুলবার উপরে থাকবে */
   position: relative; 
 }
 .mobile-keyboard-toolbar button {

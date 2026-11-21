@@ -3,7 +3,8 @@ import Editor from '@monaco-editor/react';
 import localforage from 'localforage';
 import { 
   FiCode, FiSave, FiFolder, FiMenu, FiPlus, FiUpload, 
-  FiX, FiPlay, FiSettings, FiCheckCircle, FiAlertCircle, FiDelete, FiCornerDownLeft, FiChevronsLeft
+  FiX, FiPlay, FiSettings, FiCheckCircle, FiAlertCircle, 
+  FiDelete, FiCornerDownLeft, FiChevronsLeft, FiSun, FiMoon, FiSearch 
 } from 'react-icons/fi';
 import './App.css';
 
@@ -15,6 +16,7 @@ function App() {
   const [showPreview, setShowPreview] = useState(false);
   const [showSettings, setShowSettings] = useState(false);
   const [fontSize, setFontSize] = useState(14);
+  const [searchQuery, setSearchQuery] = useState(''); // ফাইল সার্চের জন্য
   
   const [alertConfig, setAlertConfig] = useState({ 
     visible: false, type: 'success', title: '', message: '', isPrompt: false, inputValue: '', onConfirm: null 
@@ -52,6 +54,9 @@ function App() {
   }, [files]);
 
   const activeFile = files.find(f => f.id === activeFileId);
+  
+  // ফাইল সার্চ ফিল্টার
+  const filteredFiles = files.filter(f => f.name.toLowerCase().includes(searchQuery.toLowerCase()));
 
   const handleCodeChange = (newCode) => {
     setFiles(prev => prev.map(f => f.id === activeFileId ? { ...f, content: newCode } : f));
@@ -247,6 +252,9 @@ function App() {
           <h1>Tech System</h1>
         </div>
         <div className="actions">
+          <button className="icon-btn bg-transparent" onClick={() => setTheme(theme === 'vs-dark' ? 'vs-light' : 'vs-dark')}>
+            {theme === 'vs-dark' ? <FiSun size={18} /> : <FiMoon size={18} />}
+          </button>
           <button className="icon-btn bg-transparent" onClick={() => setShowSettings(true)}>
             <FiSettings size={18} />
           </button>
@@ -265,6 +273,18 @@ function App() {
             <span><FiFolder size={14} /> Explorer</span>
             <button onClick={handleCreateNewFile} className="new-file-btn"><FiPlus size={16} /></button>
           </div>
+          
+          {/* নতুন সার্চ বার */}
+          <div className="sidebar-search">
+            <FiSearch size={14} />
+            <input 
+              type="text" 
+              placeholder="Search files..." 
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+            />
+          </div>
+
           <div className="sidebar-actions">
             <button onClick={() => fileInputRef.current.click()}>
               <FiUpload size={14} /> Open from Phone
@@ -272,7 +292,7 @@ function App() {
             <input type="file" ref={fileInputRef} onChange={handleFileOpen} style={{ display: 'none' }} accept=".js,.html,.css,.json,.py,.txt" />
           </div>
           <ul className="file-list">
-            {files.map(file => (
+            {filteredFiles.map(file => (
               <li key={file.id} className={activeFileId === file.id ? 'active' : ''} onClick={() => { setActiveFileId(file.id); setSidebarOpen(false); }}>
                 <FiCode size={14} /> 
                 <span className="file-name">{file.name}</span>
@@ -308,8 +328,6 @@ function App() {
                     formatOnPaste: false, 
                     formatOnType: false, 
                     autoIndent: 'none', 
-                    autoClosingBrackets: 'never', 
-                    autoClosingQuotes: 'never', 
                     tabSize: 2, 
                     readOnly: false, 
                     domReadOnly: false, 
@@ -317,6 +335,13 @@ function App() {
                     contextmenu: false, 
                     selectOnLineNumbers: true, 
                     cursorBlinking: 'smooth', 
+                    quickSuggestions: true, 
+                    suggestOnTriggerCharacters: true, 
+                    acceptSuggestionOnEnter: "on", 
+                    colorDecorators: true, 
+                    matchBrackets: "always", 
+                    autoClosingBrackets: "languageDefined", 
+                    autoClosingQuotes: "languageDefined",
                   }}
                 />
               </div>
