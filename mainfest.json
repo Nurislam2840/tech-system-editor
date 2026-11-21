@@ -1,0 +1,18 @@
+{
+  "name": "Tech System Editor",
+  "short_name": "Tech System",
+  "description": "Premium Web Code Editor",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#0f172a",
+  "theme_color": "#0f172a",
+  "orientation": "portrait",
+  "icons": [
+    {
+      "src": "https://cdn-icons-png.flaticon.com/512/1005/1005141.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
+    }
+  ]
+}
