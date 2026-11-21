@@ -136,20 +136,45 @@ function App() {
   const handleEditorDidMount = (editor, monaco) => {
     editorRef.current = editor;
 
-    // মোবাইলে Backspace ফিক্স
+    // মোবাইলের জন্য নিখুঁত Backspace লজিক
     editor.addCommand(monaco.KeyCode.Backspace, () => {
       const position = editor.getPosition();
       const model = editor.getModel();
+      const selection = editor.getSelection();
+
+      // যদি কিছু সিলেক্ট করা থাকে, তবে সেটি মুছে ফেলবে
+      if (selection && !selection.isEmpty()) {
+        editor.executeEdits('', [{ range: selection, text: '' }]);
+        return;
+      }
+
       const lineContent = model.getLineContent(position.lineNumber);
-      
-      if (lineContent.trim() === '' && position.column === 1 && position.lineNumber > 1) {
-        editor.setPosition({ lineNumber: position.lineNumber - 1, column: model.getLineMaxColumn(position.lineNumber - 1) });
-        editor.trigger('keyboard', 'deleteLeft', {});
-      } else {
-        editor.trigger('keyboard', 'deleteLeft', {});
+
+      // যদি ফাঁকা লাইনে থাকেন
+      if (lineContent.trim() === '' && position.lineNumber > 1) {
+        const prevLineLength = model.getLineMaxColumn(position.lineNumber - 1);
+        editor.executeEdits('', [{
+          range: new monaco.Range(position.lineNumber - 1, prevLineLength, position.lineNumber, 1),
+          text: ''
+        }]);
+        editor.setPosition({ lineNumber: position.lineNumber - 1, column: prevLineLength });
+      } else if (position.column > 1) {
+        // সাধারণ অক্ষর মুছবে
+        const range = new monaco.Range(position.lineNumber, position.column - 1, position.lineNumber, position.column);
+        editor.executeEdits('', [{ range: range, text: '' }]);
+        editor.setPosition({ lineNumber: position.lineNumber, column: position.column - 1 });
+      } else if (position.lineNumber > 1) {
+        // লাইনের একদম শুরুতে থাকলে আগের লাইনের সাথে জোড়া লাগবে
+        const prevLineLength = model.getLineMaxColumn(position.lineNumber - 1);
+        editor.executeEdits('', [{
+          range: new monaco.Range(position.lineNumber - 1, prevLineLength, position.lineNumber, 1),
+          text: ''
+        }]);
+        editor.setPosition({ lineNumber: position.lineNumber - 1, column: prevLineLength });
       }
     });
 
+    // মোবাইলে টেক্সট সিলেক্ট করলে কাস্টম মেনু
     editor.onContextMenu((e) => {
       e.event.preventDefault();
       const selection = editor.getSelection();
@@ -262,12 +287,12 @@ function App() {
                     fontSize: fontSize, 
                     fontFamily: "'Fira Code', 'Courier New', monospace", 
                     minimap: { enabled: false }, 
-                    wordWrap: 'off', 
+                    wordWrap: 'off', // লাইন ভাঙা বন্ধ
                     automaticLayout: true, 
                     lineNumbers: 'on', 
                     formatOnPaste: true, 
                     formatOnType: true, 
-                    autoIndent: 'none',
+                    autoIndent: 'none', // মোবাইলে অটো-ইন্ডেন্ট বন্ধ
                     tabSize: 2, 
                     readOnly: false, 
                     domReadOnly: false, 
