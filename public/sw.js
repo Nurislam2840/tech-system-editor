@@ -1,4 +1,4 @@
-const CACHE_NAME = 'tech-system-v4';
+const CACHE_NAME = 'tech-system-v5;
 const ASSETS = ['/', '/index.html'];
 
 self.addEventListener('install', (e) => {

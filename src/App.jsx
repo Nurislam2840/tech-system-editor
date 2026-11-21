@@ -23,6 +23,7 @@ function App() {
   
   const fileInputRef = useRef(null);
   const editorRef = useRef(null);
+  const monacoRef = useRef(null);
 
   const showCustomAlert = (type, title, message, isPrompt = false, onConfirm = null) => {
     setAlertConfig({ visible: true, type, title, message, isPrompt, inputValue: '', onConfirm });
@@ -135,24 +136,23 @@ function App() {
 
   const handleEditorDidMount = (editor, monaco) => {
     editorRef.current = editor;
+    monacoRef.current = monaco;
 
-    // মোবাইলে Backspace ঠিকমতো কাজ করার জন্য onKeyDown ইভেন্ট
-    editor.onKeyDown((e) => {
-      if (e.keyCode === monaco.KeyCode.Backspace) {
+    // মোবাইল কীবোর্ডের Backspace ধরার নিখুঁত উপায়
+    const handleBackspace = (e) => {
+      if (e.key === 'Backspace' || e.keyCode === 8) {
         const position = editor.getPosition();
         const model = editor.getModel();
         const selection = editor.getSelection();
 
-        // যদি কিছু সিলেক্ট করা থাকে, তবে সেটি মুছে ফেলবে
-        if (selection && !selection.isEmpty()) {
-          return; // ডিফল্ট ডিলিট কাজ করবে
-        }
+        if (!selection.isEmpty()) return; 
 
         const lineContent = model.getLineContent(position.lineNumber);
         
-        // যদি ফাঁকা লাইনে থাকেন (এবং প্রথম লাইন না হয়)
         if (lineContent.trim() === '' && position.lineNumber > 1) {
-          e.preventDefault(); // ডিফল্ট ডিলিট বন্ধ
+          e.preventDefault();
+          e.stopPropagation();
+          
           const prevLineLength = model.getLineMaxColumn(position.lineNumber - 1);
           editor.executeEdits('', [{
             range: new monaco.Range(position.lineNumber - 1, prevLineLength, position.lineNumber, 1),
@@ -161,9 +161,11 @@ function App() {
           editor.setPosition({ lineNumber: position.lineNumber - 1, column: prevLineLength });
         }
       }
-    });
+    };
 
-    // মোবাইলে টেক্সট সিলেক্ট করলে কাস্টম মেনু দেখানোর ইভেন্ট
+    // সরাসরি ডকুমেন্টে ইভেন্ট লিসেনার যুক্ত করা
+    document.addEventListener('keydown', handleBackspace, true);
+
     editor.onContextMenu((e) => {
       e.event.preventDefault();
       const selection = editor.getSelection();
@@ -173,8 +175,12 @@ function App() {
         if (coords) setContextMenu({ visible: true, x: coords.left, y: coords.top + 30 });
       }
     });
-    
     editor.onMouseDown(() => setContextMenu({ visible: false, x: 0, y: 0 }));
+
+    // ক্লিনআপ
+    return () => {
+      document.removeEventListener('keydown', handleBackspace, true);
+    };
   };
 
   const handleCut = async () => {
