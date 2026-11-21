@@ -16,7 +16,7 @@ function App() {
   const [showPreview, setShowPreview] = useState(false);
   const [showSettings, setShowSettings] = useState(false);
   const [fontSize, setFontSize] = useState(14);
-  const [searchQuery, setSearchQuery] = useState(''); // ফাইল সার্চের জন্য
+  const [searchQuery, setSearchQuery] = useState('');
   
   const [alertConfig, setAlertConfig] = useState({ 
     visible: false, type: 'success', title: '', message: '', isPrompt: false, inputValue: '', onConfirm: null 
@@ -40,8 +40,8 @@ function App() {
       } else {
         const defaultFiles = [
           { id: '1', name: 'index.html', language: 'html', content: '<!DOCTYPE html>\n<html>\n<body>\n  <h1 style="color: #38bdf8;">Hello Tech System!</h1>\n</body>\n</html>' },
-          { id: '2', name: 'style.css', language: 'css', content: 'body {\n  background: #0f172a;\n  color: white;\n}' },
-          { id: '3', name: 'app.js', language: 'javascript', content: 'console.log("App Running...");' }
+          { id: '2', name: 'style.css', language: 'css', content: 'body {\n  background: #0f172a;\n  color: white;\n  font-family: "Outfit", sans-serif;\n}' },
+          { id: '3', name: 'app.js', language: 'javascript', content: 'console.log("App Running...");\n// Write your code here' }
         ];
         setFiles(defaultFiles);
         setActiveFileId('1');
@@ -54,8 +54,6 @@ function App() {
   }, [files]);
 
   const activeFile = files.find(f => f.id === activeFileId);
-  
-  // ফাইল সার্চ ফিল্টার
   const filteredFiles = files.filter(f => f.name.toLowerCase().includes(searchQuery.toLowerCase()));
 
   const handleCodeChange = (newCode) => {
@@ -274,7 +272,6 @@ function App() {
             <button onClick={handleCreateNewFile} className="new-file-btn"><FiPlus size={16} /></button>
           </div>
           
-          {/* নতুন সার্চ বার */}
           <div className="sidebar-search">
             <FiSearch size={14} />
             <input 
@@ -320,7 +317,9 @@ function App() {
                   onMount={handleEditorDidMount}
                   options={{
                     fontSize: fontSize, 
-                    fontFamily: "'Fira Code', 'Courier New', monospace", 
+                    lineHeight: 1.6, // নতুন প্রিমিয়াম লাইন হাইট
+                    fontLigatures: true, // কোডের চিহ্নগুলো সুন্দর দেখাবে
+                    fontFamily: "'JetBrains Mono', 'Fira Code', 'Courier New', monospace", // নতুন প্রিমিয়াম ফন্ট
                     minimap: { enabled: false }, 
                     wordWrap: 'off', 
                     automaticLayout: true, 
