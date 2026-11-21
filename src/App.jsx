@@ -3,7 +3,7 @@ import Editor from '@monaco-editor/react';
 import localforage from 'localforage';
 import { 
   FiCode, FiSave, FiFolder, FiMenu, FiPlus, FiUpload, 
-  FiX, FiPlay, FiSettings, FiCheckCircle, FiAlertCircle
+  FiX, FiPlay, FiSettings, FiCheckCircle, FiAlertCircle, FiDelete, FiCornerDownLeft, FiChevronsLeft
 } from 'react-icons/fi';
 import './App.css';
 
@@ -134,38 +134,62 @@ function App() {
     });
   };
 
+  // === মোবাইল কাস্টম কীবোর্ড অ্যাকশন ===
+  const handleMobileDelete = () => {
+    if (editorRef.current) {
+      const position = editorRef.current.getPosition();
+      const model = editorRef.current.getModel();
+      const selection = editorRef.current.getSelection();
+
+      if (!selection.isEmpty()) {
+        editorRef.current.executeEdits('', [{ range: selection, text: '' }]);
+        return;
+      }
+
+      const lineContent = model.getLineContent(position.lineNumber);
+      
+      if (lineContent.trim() === '' && position.lineNumber > 1) {
+        // ফাঁকা লাইন ডিলিট
+        const prevLineLength = model.getLineMaxColumn(position.lineNumber - 1);
+        editorRef.current.executeEdits('', [{
+          range: new monacoRef.current.Range(position.lineNumber - 1, prevLineLength, position.lineNumber, 1),
+          text: ''
+        }]);
+        editorRef.current.setPosition({ lineNumber: position.lineNumber - 1, column: prevLineLength });
+      } else if (position.column > 1) {
+        // সাধারণ অক্ষর ডিলিট
+        const range = new monacoRef.current.Range(position.lineNumber, position.column - 1, position.lineNumber, position.column);
+        editorRef.current.executeEdits('', [{ range: range, text: '' }]);
+        editorRef.current.setPosition({ lineNumber: position.lineNumber, column: position.column - 1 });
+      } else if (position.lineNumber > 1) {
+        // লাইনের শুরুতে থাকলে আগের লাইনের সাথে জোড়া লাগবে
+        const prevLineLength = model.getLineMaxColumn(position.lineNumber - 1);
+        editorRef.current.executeEdits('', [{
+          range: new monacoRef.current.Range(position.lineNumber - 1, prevLineLength, position.lineNumber, 1),
+          text: ''
+        }]);
+        editorRef.current.setPosition({ lineNumber: position.lineNumber - 1, column: prevLineLength });
+      }
+    }
+  };
+
+  const handleMobileEnter = () => {
+    if (editorRef.current) {
+      editorRef.current.trigger('keyboard', 'type', { text: '\n' });
+    }
+  };
+
+  const handleMobileTab = () => {
+    if (editorRef.current) {
+      editorRef.current.trigger('keyboard', 'type', { text: '  ' });
+    }
+  };
+
   const handleEditorDidMount = (editor, monaco) => {
     editorRef.current = editor;
     monacoRef.current = monaco;
 
-    // মোবাইল কীবোর্ডের Backspace ধরার নিখুঁত উপায়
-    const handleBackspace = (e) => {
-      if (e.key === 'Backspace' || e.keyCode === 8) {
-        const position = editor.getPosition();
-        const model = editor.getModel();
-        const selection = editor.getSelection();
-
-        if (!selection.isEmpty()) return; 
-
-        const lineContent = model.getLineContent(position.lineNumber);
-        
-        if (lineContent.trim() === '' && position.lineNumber > 1) {
-          e.preventDefault();
-          e.stopPropagation();
-          
-          const prevLineLength = model.getLineMaxColumn(position.lineNumber - 1);
-          editor.executeEdits('', [{
-            range: new monaco.Range(position.lineNumber - 1, prevLineLength, position.lineNumber, 1),
-            text: ''
-          }]);
-          editor.setPosition({ lineNumber: position.lineNumber - 1, column: prevLineLength });
-        }
-      }
-    };
-
-    // সরাসরি ডকুমেন্টে ইভেন্ট লিসেনার যুক্ত করা
-    document.addEventListener('keydown', handleBackspace, true);
-
+    // কনটেক্সট মেনু
     editor.onContextMenu((e) => {
       e.event.preventDefault();
       const selection = editor.getSelection();
@@ -176,11 +200,6 @@ function App() {
       }
     });
     editor.onMouseDown(() => setContextMenu({ visible: false, x: 0, y: 0 }));
-
-    // ক্লিনআপ
-    return () => {
-      document.removeEventListener('keydown', handleBackspace, true);
-    };
   };
 
   const handleCut = async () => {
@@ -303,10 +322,16 @@ function App() {
                     contextmenu: false, 
                     selectOnLineNumbers: true, 
                     cursorBlinking: 'smooth', 
-                    semanticHighlighting: { enabled: true }, 
-                    bracketPairColorization: { enabled: true },
                   }}
                 />
+              </div>
+
+              {/* মোবাইল কাস্টম কীবোর্ড টুলবার */}
+              <div className="mobile-keyboard-toolbar">
+                <button onClick={() => editorRef.current.trigger('keyboard', 'undo')}><FiChevronsLeft /></button>
+                <button onClick={handleMobileTab}>Tab</button>
+                <button onClick={handleMobileEnter}><FiCornerDownLeft /></button>
+                <button onClick={handleMobileDelete} className="delete-btn"><FiDelete /></button>
               </div>
             </>
           ) : (
