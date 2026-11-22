@@ -18,7 +18,7 @@ import {
 } from 'react-icons/fi';
 import './App.css';
 
-// ---------- File icon helper ----------
+// ---------- ৬০+ ভাষার সাপোর্ট এবং আইকন ----------
 const getFileIcon = (name) => {
   const n = name.toLowerCase();
   if (n.endsWith('.html') || n.endsWith('.htm')) return '🟧';
@@ -29,21 +29,30 @@ const getFileIcon = (name) => {
   if (n.endsWith('.py')) return '🐍';
   if (n.endsWith('.md')) return '📘';
   if (n.endsWith('.txt')) return '📄';
+  if (n.endsWith('.c') || n.endsWith('.cpp') || n.endsWith('.h')) return '⚙️';
+  if (n.endsWith('.java')) return '☕';
+  if (n.endsWith('.php')) return '🐘';
+  if (n.endsWith('.sql')) return '🗄️';
+  if (n.endsWith('.xml')) return '📜';
   return '📄';
 };
 
 const getLanguage = (name) => {
   const ext = name.split('.').pop().toLowerCase();
-  if (['js', 'jsx', 'ts', 'tsx'].includes(ext)) return 'javascript';
-  if (ext === 'html' || ext === 'htm') return 'html';
-  if (ext === 'css') return 'css';
-  if (ext === 'py') return 'python';
-  if (ext === 'json') return 'json';
-  if (ext === 'md') return 'markdown';
-  return 'plaintext';
+  const langMap = {
+    js: 'javascript', jsx: 'javascript', ts: 'typescript', tsx: 'typescript',
+    html: 'html', htm: 'html', css: 'css', scss: 'scss', less: 'less',
+    py: 'python', java: 'java', c: 'c', cpp: 'cpp', cs: 'csharp',
+    php: 'php', rb: 'ruby', go: 'go', rs: 'rust', swift: 'swift',
+    kt: 'kotlin', sql: 'sql', sh: 'shell', bash: 'shell', ps1: 'powershell',
+    json: 'json', xml: 'xml', yaml: 'yaml', yml: 'yaml', md: 'markdown',
+    dockerfile: 'dockerfile', r: 'r', lua: 'lua', dart: 'dart', scala: 'scala',
+    pl: 'perl', asm: 'assembly', bat: 'bat', graphql: 'graphql', vue: 'html',
+    svelte: 'html', txt: 'plaintext'
+  };
+  return langMap[ext] || 'plaintext';
 };
 
-// ---------- Console level color ----------
 const logColor = (level) => {
   switch (level) {
     case 'error': return '#ef4444';
@@ -54,7 +63,7 @@ const logColor = (level) => {
 };
 
 function App() {
-  const [theme, setTheme] = useState('vs-dark');
+  const [theme, setTheme] = useState('tech-dark');
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [files, setFiles] = useState([]);
   const [activeFileId, setActiveFileId] = useState(null);
@@ -64,7 +73,7 @@ function App() {
   const [commandQuery, setCommandQuery] = useState('');
   const [fontSize, setFontSize] = useState(14);
   const [searchQuery, setSearchQuery] = useState('');
-  const [searchMode, setSearchMode] = useState('name'); // 'name' | 'content'
+  const [searchMode, setSearchMode] = useState('name');
   const [searchResults, setSearchResults] = useState([]);
   const [savedFilesMap, setSavedFilesMap] = useState({});
   const [online, setOnline] = useState(navigator.onLine);
@@ -87,17 +96,14 @@ function App() {
   const saveTimerRef = useRef(null);
   const searchTimerRef = useRef(null);
 
-  // ---------- Alerts ----------
   const showCustomAlert = (type, title, message, isPrompt = false, onConfirm = null) => {
     setAlertConfig({ visible: true, type, title, message, isPrompt, inputValue: '', onConfirm });
   };
   const closeAlert = () => setAlertConfig(prev => ({ ...prev, visible: false }));
 
-  // 👇👇 এই ২টি লাইন সবার উপরে নিয়ে আসা হয়েছে যাতে ReferenceError না হয় 👇👇
   const activeFile = files.find(f => f.id === activeFileId);
   const filteredFiles = files.filter(f => f.name.toLowerCase().includes(searchQuery.toLowerCase()));
 
-  // ---------- Online / Offline ----------
   useEffect(() => {
     const on = () => setOnline(true);
     const off = () => setOnline(false);
@@ -106,7 +112,6 @@ function App() {
     return () => { window.removeEventListener('online', on); window.removeEventListener('offline', off); };
   }, []);
 
-  // ---------- Load from URL hash or localforage ----------
   useEffect(() => {
     const load = async () => {
       const hash = window.location.hash;
@@ -135,7 +140,8 @@ function App() {
         const defaults = [
           { id: '1', name: 'index.html', language: 'html', content: '<!DOCTYPE html>\n<html>\n<head>\n  <title>My App</title>\n</head>\n<body>\n  <h1 style="color: #38bdf8;">Hello Tech System!</h1>\n  <button onclick="testLog()">Click Me</button>\n</body>\n</html>' },
           { id: '2', name: 'style.css', language: 'css', content: 'body {\n    background: #0f172a;\n    color: white;\n    font-family: "Outfit", sans-serif;\n    padding: 20px;\n}' },
-          { id: '3', name: 'app.js', language: 'javascript', content: 'console.log("App Running...");\n\nfunction testLog() {\n    console.log("Button clicked at: " + new Date().toLocaleTimeString());\n    console.warn("This is a warning");\n    console.error("This is an error demo");\n}' }
+          { id: '3', name: 'app.js', language: 'javascript', content: 'console.log("App Running...");\n\nfunction testLog() {\n    console.log("Button clicked at: " + new Date().toLocaleTimeString());\n    console.warn("This is a warning");\n    console.error("This is an error demo");\n}' },
+          { id: '4', name: 'main.py', language: 'python', content: '# Python Example\ndef greet(name):\n    print(f"Hello, {name}!")\n\ngreet("Developer")' }
         ];
         setFiles(defaults);
         setActiveFileId('1');
@@ -147,7 +153,6 @@ function App() {
     load();
   }, []);
 
-  // ---------- Debounced save ----------
   useEffect(() => {
     if (files.length === 0) return;
     if (saveTimerRef.current) clearTimeout(saveTimerRef.current);
@@ -162,13 +167,11 @@ function App() {
     return () => { if (saveTimerRef.current) clearTimeout(saveTimerRef.current); };
   }, [files]);
 
-  // ---------- Unsaved indicator ----------
   useEffect(() => {
     if (!activeFile) { setShowUnsavedDot(false); return; }
     setShowUnsavedDot(savedFilesMap[activeFile.id] !== activeFile.content);
   }, [files, activeFile, savedFilesMap]);
 
-  // ---------- Content search (debounced) ----------
   useEffect(() => {
     if (searchMode !== 'content' || !searchQuery.trim()) {
       setSearchResults([]);
@@ -189,12 +192,10 @@ function App() {
     }, 250);
   }, [searchQuery, searchMode, files]);
 
-  // ---------- Code change ----------
   const handleCodeChange = useCallback((newCode) => {
     setFiles(prev => prev.map(f => f.id === activeFileId ? { ...f, content: newCode ?? '' } : f));
   }, [activeFileId]);
 
-  // ---------- Save to phone ----------
   const handleSaveToPhone = async () => {
     if (!activeFile) return;
     try {
@@ -230,7 +231,6 @@ function App() {
     } catch (err) { console.log('Save cancelled', err); }
   };
 
-  // ---------- Export ZIP ----------
   const handleExportZip = async () => {
     const zip = new JSZip();
     files.forEach(f => zip.file(f.name, f.content));
@@ -244,7 +244,6 @@ function App() {
     showCustomAlert('success', 'Exported!', 'Project exported as ZIP.');
   };
 
-  // ---------- Share via URL ----------
   const handleShareUrl = () => {
     if (!activeFile) return;
     try {
@@ -260,20 +259,19 @@ function App() {
     }
   };
 
-  // ---------- Format document (Prettier) ----------
   const handleFormat = async () => {
     if (!activeFile) return;
     try {
       const lang = activeFile.language;
       let parser = 'babel';
-      let plugins = [parserBabel, parserEstree]; // JS/JSON এর জন্য estree লাগে
+      let plugins = [parserBabel, parserEstree];
 
       if (lang === 'html') { parser = 'html'; plugins = [parserHtml]; }
       else if (lang === 'css') { parser = 'css'; plugins = [parserCss]; }
       else if (lang === 'json') { parser = 'json'; plugins = [parserBabel, parserEstree]; }
       else if (lang === 'markdown') { parser = 'markdown'; plugins = [parserBabel, parserEstree]; }
-      else if (lang === 'python') {
-        showCustomAlert('info', 'Format', 'Python formatting not supported.');
+      else if (!['javascript', 'typescript'].includes(lang)) {
+        showCustomAlert('info', 'Formatting', `Auto-formatting is best supported for HTML, CSS, JS, JSON. ${lang.toUpperCase()} formatting is not fully supported.`);
         return;
       }
 
@@ -291,15 +289,14 @@ function App() {
     }
   };
 
-  // ---------- Create new file ----------
   const handleCreateNewFile = () => {
-    showCustomAlert('info', 'New File', 'Enter file name (e.g. script.js):', true, (fileName) => {
+    showCustomAlert('info', 'New File', 'Enter file name (e.g. script.py, app.java):', true, (fileName) => {
       if (!fileName) return;
       const newFile = {
         id: Date.now().toString(),
         name: fileName,
         language: getLanguage(fileName),
-        content: '// New File\n'
+        content: ''
       };
       setFiles(prev => [...prev, newFile]);
       setActiveFileId(newFile.id);
@@ -307,7 +304,6 @@ function App() {
     });
   };
 
-  // ---------- Rename file ----------
   const handleRenameFile = (id) => {
     const file = files.find(f => f.id === id);
     if (!file) return;
@@ -322,7 +318,6 @@ function App() {
     setContextMenu(c => ({ ...c, visible: false }));
   };
 
-  // ---------- Delete file ----------
   const handleDeleteFile = (id, e) => {
     e?.stopPropagation();
     showCustomAlert('danger', 'Close File', 'Are you sure? Unsaved changes will be lost.', false, () => {
@@ -333,7 +328,6 @@ function App() {
     });
   };
 
-  // ---------- Import from URL ----------
   const handleImportFromUrl = () => {
     showCustomAlert('info', 'Import from URL', 'Enter file URL:', true, async (url) => {
       if (!url) return;
@@ -362,32 +356,40 @@ function App() {
   const handleCut = async () => {
     if (!editorRef.current) return;
     try {
-      const text = editorRef.current.getModel().getValueInRange(editorRef.current.getSelection());
+      const selection = editorRef.current.getSelection();
+      const text = editorRef.current.getModel().getValueInRange(selection);
       await navigator.clipboard.writeText(text);
-      editorRef.current.executeEdits('', [{ range: editorRef.current.getSelection(), text: '' }]);
+      editorRef.current.executeEdits('', [{ range: selection, text: '' }]);
     } catch { showCustomAlert('danger', 'Cut failed', 'Clipboard denied.'); }
     setContextMenu(c => ({ ...c, visible: false }));
   };
+
   const handleCopy = async () => {
     if (!editorRef.current) return;
     try {
-      const text = editorRef.current.getModel().getValueInRange(editorRef.current.getSelection());
+      const selection = editorRef.current.getSelection();
+      const text = editorRef.current.getModel().getValueInRange(selection);
       await navigator.clipboard.writeText(text);
       showCustomAlert('success', 'Copied!', 'Text copied to clipboard.');
     } catch { showCustomAlert('danger', 'Copy failed', 'Clipboard denied.'); }
     setContextMenu(c => ({ ...c, visible: false }));
   };
+
   const handlePaste = async () => {
     try {
       const text = await navigator.clipboard.readText();
-      if (editorRef.current) editorRef.current.executeEdits('', [{ range: editorRef.current.getSelection(), text }]);
+      if (editorRef.current) {
+        editorRef.current.executeEdits('', [{ range: editorRef.current.getSelection(), text }]);
+      }
     } catch { showCustomAlert('danger', 'Paste Failed', 'Allow clipboard access.'); }
     setContextMenu(c => ({ ...c, visible: false }));
   };
+
   const handleSelectAll = () => {
     if (editorRef.current) editorRef.current.setSelection(editorRef.current.getModel().getFullModelRange());
     setContextMenu(c => ({ ...c, visible: false }));
   };
+
   const handleDeleteSelection = () => {
     if (editorRef.current) editorRef.current.executeEdits('', [{ range: editorRef.current.getSelection(), text: '' }]);
     setContextMenu(c => ({ ...c, visible: false }));
@@ -451,17 +453,46 @@ function App() {
     keepFocus();
   };
 
-  // ---------- Insert snippet ----------
   const insertSnippet = (text) => {
     if (!editorRef.current) return;
     editorRef.current.executeEdits('', [{ range: editorRef.current.getSelection(), text, forceMoveMarkers: true }]);
     keepFocus();
   };
 
-  // ---------- Editor mount ----------
   const handleEditorDidMount = (editor, monaco) => {
     editorRef.current = editor;
     monacoRef.current = monaco;
+
+    // 👇 কাস্টম প্রিমিয়াম থিম ডিফাইন করা হলো 👇
+    monaco.editor.defineTheme('tech-dark', {
+      base: 'vs-dark',
+      inherit: true,
+      rules: [
+        { token: 'comment', foreground: '6A9955', fontStyle: 'italic' },
+        { token: 'keyword', foreground: 'C586C0' },
+        { token: 'string', foreground: 'CE9178' },
+        { token: 'number', foreground: 'B5CEA8' },
+        { token: 'type', foreground: '4EC9B0' },
+        { token: 'class', foreground: '4EC9B0' },
+        { token: 'function', foreground: 'DCDCAA' },
+        { token: 'variable', foreground: '9CDCFE' },
+        { token: 'constant', foreground: '4FC1FF' },
+        { token: 'tag', foreground: '569CD6' },
+        { token: 'attribute.name', foreground: '9CDCFE' },
+        { token: 'attribute.value', foreground: 'CE9178' },
+        { token: 'delimiter.html', foreground: '808080' },
+        { token: 'metatag', foreground: '569CD6' }
+      ],
+      colors: {
+        'editor.background': '#1e1e1e',
+        'editor.foreground': '#D4D4D4',
+        'editorLineNumber.foreground': '#858585',
+        'editorLineNumber.activeForeground': '#C6C6C6',
+        'editor.selectionBackground': '#264F78',
+        'editor.lineHighlightBackground': '#2A2D2E',
+        'editorCursor.foreground': '#A7A7A7',
+      }
+    });
 
     editor.onContextMenu((e) => {
       e.event.preventDefault();
@@ -469,6 +500,7 @@ function App() {
       const hasSelection = selection && !selection.isEmpty();
       const position = editor.getPosition();
       const coords = position ? editor.getScrolledVisiblePosition(position) : null;
+      
       if (coords) {
         setContextMenu({
           visible: true,
@@ -477,8 +509,17 @@ function App() {
           hasSelection,
           fileId: activeFileId
         });
+      } else {
+        setContextMenu({
+          visible: true,
+          x: (e.event.posx || window.innerWidth / 2) - 80,
+          y: (e.event.posy || window.innerHeight / 2) - 100,
+          hasSelection,
+          fileId: activeFileId
+        });
       }
     });
+    
     editor.onMouseDown(() => setContextMenu(c => ({ ...c, visible: false })));
 
     if (window.visualViewport) {
@@ -490,7 +531,6 @@ function App() {
     }
   };
 
-  // ---------- Preview content ----------
   const getPreviewContent = () => {
     const htmlFile = files.find(f => f.name.endsWith('.html') || f.name.endsWith('.htm'));
     const cssFiles = files.filter(f => f.name.endsWith('.css'));
@@ -542,7 +582,6 @@ function App() {
     return html;
   };
 
-  // ---------- Console messages ----------
   useEffect(() => {
     const handleMessage = (event) => {
       if (event.data && event.data.type === 'CONSOLE_LOG') {
@@ -553,7 +592,6 @@ function App() {
     return () => window.removeEventListener('message', handleMessage);
   }, []);
 
-  // ---------- Keyboard shortcuts ----------
   useEffect(() => {
     const handler = (e) => {
       const mod = e.ctrlKey || e.metaKey;
@@ -568,7 +606,6 @@ function App() {
     // eslint-disable-next-line
   }, [activeFile]);
 
-  // ---------- Commands ----------
   const commands = useMemo(() => [
     { id: 'new', label: 'New File', icon: <FiPlus />, action: handleCreateNewFile },
     { id: 'format', label: 'Format Document', icon: <FiAlignLeft />, action: handleFormat },
@@ -577,7 +614,7 @@ function App() {
     { id: 'share', label: 'Share via URL', icon: <FiShare2 />, action: handleShareUrl },
     { id: 'import', label: 'Import from URL', icon: <FiLink />, action: handleImportFromUrl },
     { id: 'preview', label: 'Toggle Preview', icon: <FiPlay />, action: () => { setShowPreview(p => !p); setConsoleLogs([]); } },
-    { id: 'theme', label: 'Toggle Theme', icon: <FiSun />, action: () => setTheme(t => t === 'vs-dark' ? 'vs-light' : 'vs-dark') },
+    { id: 'theme', label: 'Toggle Theme', icon: <FiSun />, action: () => setTheme(t => t === 'tech-dark' ? 'vs-light' : 'tech-dark') },
     { id: 'settings', label: 'Open Settings', icon: <FiSettings />, action: () => setShowSettings(true) },
     { id: 'find', label: 'Find in File', icon: <FiSearch />, action: () => editorRef.current?.getAction('actions.find')?.run() },
     { id: 'undo', label: 'Undo', icon: <FiChevronsLeft />, action: () => { editorRef.current?.trigger('keyboard', 'undo'); keepFocus(); } },
@@ -592,7 +629,6 @@ function App() {
     cmd.action();
   };
 
-  // ---------- Time ago ----------
   const timeAgo = (t) => {
     if (!t) return 'never';
     const diff = Math.floor((Date.now() - t) / 1000);
@@ -604,7 +640,6 @@ function App() {
 
   return (
     <div className={`app-container ${theme === 'vs-light' ? 'light-mode' : ''}`}>
-      {/* TOP BAR */}
       <header className="top-bar">
         <div className="logo">
           <button className="menu-btn" onClick={() => setSidebarOpen(!sidebarOpen)} aria-label="Menu">
@@ -618,8 +653,8 @@ function App() {
           <button className="icon-btn bg-transparent" onClick={() => setShowCommandPalette(true)} title="Command Palette">
             <FiCommand size={18} />
           </button>
-          <button className="icon-btn bg-transparent" onClick={() => setTheme(theme === 'vs-dark' ? 'vs-light' : 'vs-dark')} title="Theme">
-            {theme === 'vs-dark' ? <FiSun size={18} /> : <FiMoon size={18} />}
+          <button className="icon-btn bg-transparent" onClick={() => setTheme(theme === 'tech-dark' ? 'vs-light' : 'tech-dark')} title="Theme">
+            {theme === 'tech-dark' ? <FiSun size={18} /> : <FiMoon size={18} />}
           </button>
           <button className="icon-btn bg-transparent" onClick={() => setShowSettings(true)} title="Settings">
             <FiSettings size={18} />
@@ -634,7 +669,6 @@ function App() {
       </header>
 
       <main className="main-content">
-        {/* SIDEBAR */}
         <aside className={`sidebar ${sidebarOpen ? 'open' : ''}`}>
           <div className="sidebar-header">
             <span><FiFolder size={14} /> Explorer</span>
@@ -687,7 +721,6 @@ function App() {
             }} style={{ display: 'none' }} accept=".js,.jsx,.ts,.tsx,.html,.css,.json,.py,.md,.txt" />
           </div>
 
-          {/* SEARCH RESULTS (content mode) */}
           {searchMode === 'content' && searchResults.length > 0 && (
             <div className="search-results">
               <div className="search-results-header">{searchResults.length} result(s)</div>
@@ -710,7 +743,6 @@ function App() {
             </div>
           )}
 
-          {/* FILE LIST */}
           <ul className="file-list">
             {filteredFiles.map(file => (
               <li
@@ -740,7 +772,6 @@ function App() {
 
         {sidebarOpen && <div className="overlay" onClick={() => setSidebarOpen(false)}></div>}
 
-        {/* EDITOR */}
         <section className="editor-section">
           {activeFile ? (
             <>
@@ -799,11 +830,11 @@ function App() {
                     find: { addExtraSpaceOnTop: false, autoFindInSelection: 'never', seedSearchStringFromSelection: 'always' },
                     snippetSuggestions: 'inline',
                     tabCompletion: 'on',
+                    "semanticHighlighting.enabled": true,
                   }}
                 />
               </div>
 
-              {/* MOBILE KEYBOARD TOOLBAR */}
               <div className="mobile-keyboard-toolbar">
                 <button onMouseDown={e => e.preventDefault()} onTouchStart={e => e.preventDefault()}
                   onClick={() => { editorRef.current?.trigger('keyboard', 'undo'); keepFocus(); }} aria-label="Undo"><FiChevronsLeft /></button>
@@ -814,7 +845,6 @@ function App() {
                   onClick={() => editorRef.current?.trigger('keyboard', 'redo')} aria-label="Redo"><FiChevronsRight /></button>
               </div>
 
-              {/* QUICK SNIPPET BAR */}
               <div className="snippet-bar">
                 {['()', '{}', '[]', '""', "''", ';', '=>', '${}', '/* */', '//'].map(s => (
                   <button key={s} onMouseDown={e => e.preventDefault()} onTouchStart={e => e.preventDefault()}
@@ -831,7 +861,6 @@ function App() {
           )}
         </section>
 
-        {/* PREVIEW */}
         {showPreview && (
           <div className="preview-panel">
             <div className="preview-header">
@@ -872,7 +901,6 @@ function App() {
         )}
       </main>
 
-      {/* CONTEXT MENU */}
       {contextMenu.visible && (
         <div className="custom-context-menu" style={{ top: contextMenu.y, left: contextMenu.x }}>
           {contextMenu.fileId && !contextMenu.hasSelection && (
@@ -893,7 +921,6 @@ function App() {
         </div>
       )}
 
-      {/* COMMAND PALETTE */}
       {showCommandPalette && (
         <div className="modal-overlay" onClick={() => setShowCommandPalette(false)}>
           <div className="command-palette" onClick={e => e.stopPropagation()}>
@@ -921,7 +948,6 @@ function App() {
         </div>
       )}
 
-      {/* ALERT */}
       {alertConfig.visible && (
         <div className="modal-overlay">
           <div className="custom-alert-box">
@@ -949,7 +975,6 @@ function App() {
         </div>
       )}
 
-      {/* SETTINGS */}
       {showSettings && (
         <div className="modal-overlay">
           <div className="modal-content">
@@ -961,7 +986,8 @@ function App() {
               <div className="setting-item">
                 <label>Editor Theme</label>
                 <select value={theme} onChange={(e) => setTheme(e.target.value)}>
-                  <option value="vs-dark">Dark (Default)</option>
+                  <option value="tech-dark">Tech Dark (Premium)</option>
+                  <option value="vs-dark">VS Dark (Default)</option>
                   <option value="vs-light">Light</option>
                   <option value="hc-black">High Contrast</option>
                 </select>
@@ -975,7 +1001,6 @@ function App() {
         </div>
       )}
 
-      {/* STATUS BAR */}
       <footer className="status-bar">
         <div className="status-left">
           <span>{activeFile?.language?.toUpperCase() || 'TXT'}</span>
