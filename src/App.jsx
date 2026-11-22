@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 import Editor from '@monaco-editor/react';
 import localforage from 'localforage';
 import JSZip from 'jszip';
@@ -32,12 +32,14 @@ function App() {
   const fileInputRef = useRef(null);
   const editorRef = useRef(null);
   const monacoRef = useRef(null);
+  const saveTimerRef = useRef(null);
 
   const showCustomAlert = (type, title, message, isPrompt = false, onConfirm = null) => {
     setAlertConfig({ visible: true, type, title, message, isPrompt, inputValue: '', onConfirm });
   };
   const closeAlert = () => setAlertConfig(prev => ({ ...prev, visible: false }));
 
+  // ---- Load once ----
   useEffect(() => {
     localforage.getItem('techSystemFiles').then((savedFiles) => {
       if (savedFiles && savedFiles.length > 0) {
@@ -55,16 +57,24 @@ function App() {
     });
   }, []);
 
+  // ---- Debounced save (typing lag fix) ----
   useEffect(() => {
-    if (files.length > 0) localforage.setItem('techSystemFiles', files);
+    if (files.length === 0) return;
+    if (saveTimerRef.current) clearTimeout(saveTimerRef.current);
+    saveTimerRef.current = setTimeout(() => {
+      localforage.setItem('techSystemFiles', files).catch(() => {});
+    }, 600);
+    return () => {
+      if (saveTimerRef.current) clearTimeout(saveTimerRef.current);
+    };
   }, [files]);
 
   const activeFile = files.find(f => f.id === activeFileId);
   const filteredFiles = files.filter(f => f.name.toLowerCase().includes(searchQuery.toLowerCase()));
 
-  const handleCodeChange = (newCode) => {
-    setFiles(prev => prev.map(f => f.id === activeFileId ? { ...f, content: newCode } : f));
-  };
+  const handleCodeChange = useCallback((newCode) => {
+    setFiles(prev => prev.map(f => f.id === activeFileId ? { ...f, content: newCode ?? '' } : f));
+  }, [activeFileId]);
 
   const handleFileOpen = (e) => {
     const file = e.target.files[0];
@@ -78,8 +88,9 @@ function App() {
       else if (extension === 'html') lang = 'html';
       else if (extension === 'css') lang = 'css';
       else if (extension === 'py') lang = 'python';
+      else if (extension === 'json') lang = 'json';
 
-      const newFile = { id: Date.now().toString(), name: file.name, language: lang, content: content };
+      const newFile = { id: Date.now().toString(), name: file.name, language: lang, content };
       setFiles(prev => [...prev, newFile]);
       setActiveFileId(newFile.id);
       setSidebarOpen(false);
@@ -95,7 +106,17 @@ function App() {
       if ('showSaveFilePicker' in window) {
         const fileHandle = await window.showSaveFilePicker({
           suggestedName: activeFile.name,
-          types: [{ description: 'Code Files', accept: { 'text/plain': ['.js', '.html', '.css', '.txt', '.json', '.py'] } }],
+          types: [{
+            description: 'Code Files',
+            accept: {
+              'text/plain': ['.txt'],
+              'text/html': ['.html'],
+              'text/css': ['.css'],
+              'text/javascript': ['.js'],
+              'application/json': ['.json'],
+              'text/x-python': ['.py'],
+            },
+          }],
         });
         const writable = await fileHandle.createWritable();
         await writable.write(activeFile.content);
@@ -118,14 +139,12 @@ function App() {
 
   const handleExportZip = async () => {
     const zip = new JSZip();
-    files.forEach(file => {
-      zip.file(file.name, file.content);
-    });
-    const content = await zip.generateAsync({ type: "blob" });
+    files.forEach(file => zip.file(file.name, file.content));
+    const content = await zip.generateAsync({ type: 'blob' });
     const url = URL.createObjectURL(content);
     const a = document.createElement('a');
     a.href = url;
-    a.download = "tech-system-project.zip";
+    a.download = 'tech-system-project.zip';
     a.click();
     URL.revokeObjectURL(url);
     showCustomAlert('success', 'Exported!', 'Project exported as ZIP successfully.');
@@ -140,6 +159,7 @@ function App() {
       else if (extension === 'html') lang = 'html';
       else if (extension === 'css') lang = 'css';
       else if (extension === 'py') lang = 'python';
+      else if (extension === 'json') lang = 'json';
 
       const newFile = { id: Date.now().toString(), name: fileName, language: lang, content: '// New File\n' };
       setFiles(prev => [...prev, newFile]);
@@ -158,111 +178,139 @@ function App() {
     });
   };
 
+  // ---- Clipboard actions ----
   const handleCut = async () => {
-    if (editorRef.current) {
+    if (!editorRef.current) return;
+    try {
       const text = editorRef.current.getModel().getValueInRange(editorRef.current.getSelection());
       await navigator.clipboard.writeText(text);
       editorRef.current.executeEdits('', [{ range: editorRef.current.getSelection(), text: '' }]);
-      setContextMenu({ ...contextMenu, visible: false });
-    }
+    } catch { showCustomAlert('danger', 'Cut failed', 'Clipboard access denied.'); }
+    setContextMenu(c => ({ ...c, visible: false }));
   };
+
   const handleCopy = async () => {
-    if (editorRef.current) {
+    if (!editorRef.current) return;
+    try {
       const text = editorRef.current.getModel().getValueInRange(editorRef.current.getSelection());
       await navigator.clipboard.writeText(text);
-      setContextMenu({ ...contextMenu, visible: false });
       showCustomAlert('success', 'Copied!', 'Selected text copied to clipboard.');
-    }
+    } catch { showCustomAlert('danger', 'Copy failed', 'Clipboard access denied.'); }
+    setContextMenu(c => ({ ...c, visible: false }));
   };
+
   const handlePaste = async () => {
     try {
       const text = await navigator.clipboard.readText();
       if (editorRef.current) {
-        editorRef.current.executeEdits('', [{ range: editorRef.current.getSelection(), text: text }]);
+        editorRef.current.executeEdits('', [{ range: editorRef.current.getSelection(), text }]);
       }
-    } catch (err) {
+    } catch {
       showCustomAlert('danger', 'Paste Failed', 'Please allow clipboard access in browser settings.');
     }
-    setContextMenu({ ...contextMenu, visible: false });
+    setContextMenu(c => ({ ...c, visible: false }));
   };
+
   const handleSelectAll = () => {
     if (editorRef.current) {
       editorRef.current.setSelection(editorRef.current.getModel().getFullModelRange());
     }
-    setContextMenu({ ...contextMenu, visible: false });
+    setContextMenu(c => ({ ...c, visible: false }));
   };
+
   const handleDeleteSelection = () => {
     if (editorRef.current) {
       editorRef.current.executeEdits('', [{ range: editorRef.current.getSelection(), text: '' }]);
-      setContextMenu({ ...contextMenu, visible: false });
     }
+    setContextMenu(c => ({ ...c, visible: false }));
   };
 
-  // মোবাইলের জন্য নিখুঁত Tab (৪টি স্পেস)
+  // ---- Mobile keyboard helpers ----
+  // ফোকাস রাখুন যাতে keyboard বন্ধ না হয়
+  const keepFocus = () => {
+    if (editorRef.current) editorRef.current.focus();
+  };
+
+  // Safe Range helper (monacoRef null guard)
+  const safeRange = (sl, sc, el, ec) => {
+    if (monacoRef.current?.Range) return new monacoRef.current.Range(sl, sc, el, ec);
+    return { startLineNumber: sl, startColumn: sc, endLineNumber: el, endColumn: ec };
+  };
+
   const handleMobileTab = () => {
-    if (editorRef.current) {
-      const selection = editorRef.current.getSelection();
-      if (!selection.isEmpty()) {
-        // যদি একাধিক লাইন সিলেক্ট থাকে, তবে সব লাইনে ৪টি স্পেস যোগ হবে
-        const model = editorRef.current.getModel();
-        const startLine = selection.startLineNumber;
-        const endLine = selection.endLineNumber;
-        const edits = [];
-        for (let i = startLine; i <= endLine; i++) {
-          edits.push({
-            range: new monacoRef.current.Range(i, 1, i, 1),
-            text: '    ', // ৪টি স্পেস
-            forceMoveMarkers: true
-          });
-        }
-        editorRef.current.executeEdits('', edits);
-      } else {
-        // সাধারণ কার্সরে ৪টি স্পেস বসবে
-        editorRef.current.trigger('keyboard', 'type', { text: '    ' });
+    if (!editorRef.current) return;
+    const selection = editorRef.current.getSelection();
+    const model = editorRef.current.getModel();
+    if (!model) return;
+
+    if (selection && !selection.isEmpty()) {
+      const edits = [];
+      for (let i = selection.startLineNumber; i <= selection.endLineNumber; i++) {
+        edits.push({
+          range: safeRange(i, 1, i, 1),
+          text: '    ',
+          forceMoveMarkers: true,
+        });
       }
+      editorRef.current.executeEdits('', edits);
+    } else {
+      editorRef.current.executeEdits('', [{
+        range: selection,
+        text: '    ',
+        forceMoveMarkers: true,
+      }]);
     }
+    keepFocus();
   };
 
   const handleMobileEnter = () => {
-    if (editorRef.current) {
-      editorRef.current.trigger('keyboard', 'type', { text: '\n' });
-    }
+    if (!editorRef.current) return;
+    editorRef.current.executeEdits('', [{
+      range: editorRef.current.getSelection(),
+      text: '\n',
+      forceMoveMarkers: true,
+    }]);
+    keepFocus();
   };
 
-  // মোবাইলের জন্য নিখুঁত Delete (ফাঁকা লাইন হলে আগের লাইনে যাবে)
   const handleMobileDelete = () => {
-    if (editorRef.current) {
-      const position = editorRef.current.getPosition();
-      const model = editorRef.current.getModel();
-      const selection = editorRef.current.getSelection();
+    if (!editorRef.current) return;
+    const model = editorRef.current.getModel();
+    if (!model) return;
+    const selection = editorRef.current.getSelection();
+    const position = editorRef.current.getPosition();
+    if (!position) return;
 
-      if (!selection.isEmpty()) {
-        editorRef.current.executeEdits('', [{ range: selection, text: '' }]);
-        return;
-      }
-
-      const lineContent = model.getLineContent(position.lineNumber);
-      
-      if (lineContent.trim() === '' && position.lineNumber > 1) {
-        const prevLineLength = model.getLineMaxColumn(position.lineNumber - 1);
-        editorRef.current.executeEdits('', [{
-          range: new monacoRef.current.Range(position.lineNumber - 1, prevLineLength, position.lineNumber, 1),
-          text: ''
-        }]);
-        editorRef.current.setPosition({ lineNumber: position.lineNumber - 1, column: prevLineLength });
-      } else if (position.column > 1) {
-        const range = new monacoRef.current.Range(position.lineNumber, position.column - 1, position.lineNumber, position.column);
-        editorRef.current.executeEdits('', [{ range: range, text: '' }]);
-        editorRef.current.setPosition({ lineNumber: position.lineNumber, column: position.column - 1 });
-      } else if (position.lineNumber > 1) {
-        const prevLineLength = model.getLineMaxColumn(position.lineNumber - 1);
-        editorRef.current.executeEdits('', [{
-          range: new monacoRef.current.Range(position.lineNumber - 1, prevLineLength, position.lineNumber, 1),
-          text: ''
-        }]);
-        editorRef.current.setPosition({ lineNumber: position.lineNumber - 1, column: prevLineLength });
-      }
+    if (selection && !selection.isEmpty()) {
+      editorRef.current.executeEdits('', [{ range: selection, text: '' }]);
+      keepFocus();
+      return;
     }
+
+    const lineContent = model.getLineContent(position.lineNumber);
+
+    if (lineContent.trim() === '' && position.lineNumber > 1) {
+      const prevLineLength = model.getLineMaxColumn(position.lineNumber - 1);
+      editorRef.current.executeEdits('', [{
+        range: safeRange(position.lineNumber - 1, prevLineLength, position.lineNumber, 1),
+        text: '',
+      }]);
+      editorRef.current.setPosition({ lineNumber: position.lineNumber - 1, column: prevLineLength });
+    } else if (position.column > 1) {
+      editorRef.current.executeEdits('', [{
+        range: safeRange(position.lineNumber, position.column - 1, position.lineNumber, position.column),
+        text: '',
+      }]);
+      editorRef.current.setPosition({ lineNumber: position.lineNumber, column: position.column - 1 });
+    } else if (position.lineNumber > 1) {
+      const prevLineLength = model.getLineMaxColumn(position.lineNumber - 1);
+      editorRef.current.executeEdits('', [{
+        range: safeRange(position.lineNumber - 1, prevLineLength, position.lineNumber, 1),
+        text: '',
+      }]);
+      editorRef.current.setPosition({ lineNumber: position.lineNumber - 1, column: prevLineLength });
+    }
+    keepFocus();
   };
 
   const handleEditorDidMount = (editor, monaco) => {
@@ -273,19 +321,28 @@ function App() {
       e.event.preventDefault();
       const selection = editor.getSelection();
       const hasSelection = selection && !selection.isEmpty();
-      
       const position = editor.getPosition();
-      const coords = editor.getScrolledVisiblePosition(position);
+      const coords = position ? editor.getScrolledVisiblePosition(position) : null;
       if (coords) {
-        setContextMenu({ 
-          visible: true, 
-          x: Math.min(coords.left, window.innerWidth - 160), 
-          y: coords.top + 30, 
-          hasSelection 
+        setContextMenu({
+          visible: true,
+          x: Math.min(coords.left, window.innerWidth - 170),
+          y: Math.min(coords.top + 30, window.innerHeight - 220),
+          hasSelection,
         });
       }
     });
-    editor.onMouseDown(() => setContextMenu({ visible: false, x: 0, y: 0, hasSelection: false }));
+    editor.onMouseDown(() => setContextMenu(c => ({ ...c, visible: false })));
+
+    // Keyboard খোলা/বন্ধ হলে layout ঠিক করুন
+    if (window.visualViewport) {
+      window.visualViewport.addEventListener('resize', () => {
+        editor.layout();
+        // cursor view-তে রাখুন
+        const pos = editor.getPosition();
+        if (pos) editor.revealPositionInCenterIfOutsideViewport(pos);
+      });
+    }
   };
 
   const getPreviewContent = () => {
@@ -295,26 +352,34 @@ function App() {
 
     let html = htmlFile ? htmlFile.content : '<h1>No HTML File Found</h1>';
     const css = cssFile ? `<style>${cssFile.content}</style>` : '';
-    
+
     const consoleOverride = `
       <script>
         (function() {
-          const originalLog = console.log;
+          const orig = console.log;
           console.log = function(...args) {
-            window.parent.postMessage({ type: 'CONSOLE_LOG', message: args.join(' ') }, '*');
-            originalLog.apply(console, args);
+            try { window.parent.postMessage({ type: 'CONSOLE_LOG', message: args.join(' ') }, '*'); } catch(e){}
+            orig.apply(console, args);
           };
+          window.addEventListener('error', function(e) {
+            try { window.parent.postMessage({ type: 'CONSOLE_LOG', message: 'ERROR: ' + e.message }, '*'); } catch(e){}
+          });
         })();
       <\/script>
     `;
 
     const js = jsFile ? `<script>${jsFile.content}<\/script>` : '';
 
-    if (html.includes('</head>')) html = html.replace('</head>', `${css}${consoleOverride}</head>`);
+    // uppercase-safe replace
+    const hasHead = /<\/head>/i.test(html);
+    const hasBody = /<\/body>/i.test(html);
+
+    if (hasHead) html = html.replace(/<\/head>/i, `${css}${consoleOverride}</head>`);
     else html = `<head>${css}${consoleOverride}</head>` + html;
-    
-    if (html.includes('</body>')) html = html.replace('</body>', `${js}</body>`);
+
+    if (hasBody) html = html.replace(/<\/body>/i, `${js}</body>`);
     else html = html + js;
+
     return html;
   };
 
@@ -360,12 +425,12 @@ function App() {
             <span><FiFolder size={14} /> Explorer</span>
             <button onClick={handleCreateNewFile} className="new-file-btn"><FiPlus size={16} /></button>
           </div>
-          
+
           <div className="sidebar-search">
             <FiSearch size={14} />
-            <input 
-              type="text" 
-              placeholder="Search files..." 
+            <input
+              type="text"
+              placeholder="Search files..."
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
             />
@@ -380,10 +445,11 @@ function App() {
             </button>
             <input type="file" ref={fileInputRef} onChange={handleFileOpen} style={{ display: 'none' }} accept=".js,.html,.css,.json,.py,.txt" />
           </div>
+
           <ul className="file-list">
             {filteredFiles.map(file => (
               <li key={file.id} className={activeFileId === file.id ? 'active' : ''} onClick={() => { setActiveFileId(file.id); setSidebarOpen(false); }}>
-                <FiCode size={14} /> 
+                <FiCode size={14} />
                 <span className="file-name">{file.name}</span>
                 <button className="close-tab-btn" onClick={(e) => handleDeleteFile(file.id, e)}>
                   <FiX size={14} />
@@ -392,7 +458,7 @@ function App() {
             ))}
           </ul>
         </aside>
-        
+
         {sidebarOpen && <div className="overlay" onClick={() => setSidebarOpen(false)}></div>}
 
         <section className="editor-section">
@@ -401,48 +467,70 @@ function App() {
               <div className="editor-header"><span>{activeFile.name}</span></div>
               <div className="editor-wrapper">
                 <Editor
-                  height="100%" 
-                  language={activeFile.language} 
-                  value={activeFile.content} 
-                  onChange={handleCodeChange} 
-                  theme={theme} 
+                  height="100%"
+                  language={activeFile.language}
+                  value={activeFile.content}
+                  onChange={handleCodeChange}
+                  theme={theme}
                   onMount={handleEditorDidMount}
                   options={{
-                    fontSize: fontSize, 
+                    fontSize,
                     lineHeight: 1.6,
                     fontLigatures: true,
-                    fontFamily: "'JetBrains Mono', 'Fira Code', monospace", 
-                    minimap: { enabled: false }, 
-                    wordWrap: 'off', 
-                    automaticLayout: true, 
-                    lineNumbers: 'on', 
-                    formatOnPaste: false, 
-                    formatOnType: false, 
-                    autoIndent: 'none', 
-                    tabSize: 4, // ট্যাবের সাইজ ৪ স্পেস করা হলো
-                    readOnly: false, 
-                    domReadOnly: false, 
-                    mouseWheelZoom: true, 
-                    contextmenu: false, 
-                    selectOnLineNumbers: true, 
-                    selectionHighlight: true, 
-                    cursorBlinking: 'smooth', 
-                    quickSuggestions: true, 
-                    suggestOnTriggerCharacters: true, 
-                    acceptSuggestionOnEnter: "on", 
-                    colorDecorators: true, 
-                    matchBrackets: "always", 
-                    autoClosingBrackets: "languageDefined", 
-                    autoClosingQuotes: "languageDefined",
+                    fontFamily: "'JetBrains Mono', 'Fira Code', monospace",
+                    minimap: { enabled: false },
+                    wordWrap: 'off',
+                    automaticLayout: true,
+                    lineNumbers: 'on',
+                    formatOnPaste: false,
+                    formatOnType: false,
+                    autoIndent: 'keep', // keep > none
+                    tabSize: 4,
+                    readOnly: false,
+                    mouseWheelZoom: true,
+                    contextmenu: false,
+                    selectOnLineNumbers: true,
+                    selectionHighlight: true,
+                    cursorBlinking: 'smooth',
+                    quickSuggestions: true,
+                    suggestOnTriggerCharacters: true,
+                    acceptSuggestionOnEnter: 'on',
+                    colorDecorators: true,
+                    matchBrackets: 'always',
+                    autoClosingBrackets: 'languageDefined',
+                    autoClosingQuotes: 'languageDefined',
+                    scrollBeyondLastLine: false,
+                    padding: { top: 8, bottom: 120 }, // bottom padding → cursor keyboard-এর উপরে থাকবে
+                    fixedOverflowWidgets: true,
                   }}
                 />
               </div>
 
               <div className="mobile-keyboard-toolbar">
-                <button onClick={() => editorRef.current.trigger('keyboard', 'undo')}><FiChevronsLeft /></button>
-                <button onClick={handleMobileTab}>Tab</button>
-                <button onClick={handleMobileEnter}><FiCornerDownLeft /></button>
-                <button onClick={handleMobileDelete} className="delete-btn"><FiDelete /></button>
+                <button
+                  onMouseDown={(e) => e.preventDefault()}
+                  onTouchStart={(e) => e.preventDefault()}
+                  onClick={() => { editorRef.current?.trigger('keyboard', 'undo'); keepFocus(); }}
+                ><FiChevronsLeft /></button>
+
+                <button
+                  onMouseDown={(e) => e.preventDefault()}
+                  onTouchStart={(e) => e.preventDefault()}
+                  onClick={handleMobileTab}
+                >Tab</button>
+
+                <button
+                  onMouseDown={(e) => e.preventDefault()}
+                  onTouchStart={(e) => e.preventDefault()}
+                  onClick={handleMobileEnter}
+                ><FiCornerDownLeft /></button>
+
+                <button
+                  onMouseDown={(e) => e.preventDefault()}
+                  onTouchStart={(e) => e.preventDefault()}
+                  onClick={handleMobileDelete}
+                  className="delete-btn"
+                ><FiDelete /></button>
               </div>
             </>
           ) : (
@@ -462,11 +550,11 @@ function App() {
                 <button onClick={() => setShowConsole(!showConsole)} style={{ fontSize: '0.8rem' }}>
                   <FiTerminal /> Console
                 </button>
-                <button onClick={() => setShowPreview(false)}><FiX size={14}/></button>
+                <button onClick={() => setShowPreview(false)}><FiX size={14} /></button>
               </div>
             </div>
-            <iframe title="preview" srcDoc={getPreviewContent()} className="preview-iframe" sandbox="allow-scripts" />
-            
+            <iframe title="preview" srcDoc={getPreviewContent()} className="preview-iframe" sandbox="allow-scripts allow-modals" />
+
             {showConsole && (
               <div className="console-panel">
                 <div className="console-header">
@@ -474,7 +562,9 @@ function App() {
                   <button onClick={() => setConsoleLogs([])}>Clear</button>
                 </div>
                 <div className="console-output">
-                  {consoleLogs.length === 0 ? <span style={{ color: '#64748b' }}>No logs yet...</span> : consoleLogs.map((log, i) => (
+                  {consoleLogs.length === 0 ? (
+                    <span style={{ color: '#64748b' }}>No logs yet...</span>
+                  ) : consoleLogs.map((log, i) => (
                     <div key={i} className="log-line">{log}</div>
                   ))}
                 </div>
@@ -506,11 +596,15 @@ function App() {
             </div>
             <h3>{alertConfig.title}</h3>
             <p>{alertConfig.message}</p>
-            
+
             {alertConfig.isPrompt && (
-              <input 
-                type="text" className="alert-input" placeholder="filename.js" value={alertConfig.inputValue}
-                onChange={(e) => setAlertConfig({...alertConfig, inputValue: e.target.value})} autoFocus
+              <input
+                type="text"
+                className="alert-input"
+                placeholder="filename.js"
+                value={alertConfig.inputValue}
+                onChange={(e) => setAlertConfig({ ...alertConfig, inputValue: e.target.value })}
+                autoFocus
               />
             )}
 
