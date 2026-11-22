@@ -419,9 +419,27 @@ function App() {
     keepFocus();
   };
 
+  // 👇 এখানে Smart Enter (Auto Indent) যোগ করা হয়েছে 👇
   const handleMobileEnter = () => {
     if (!editorRef.current) return;
-    editorRef.current.executeEdits('', [{ range: editorRef.current.getSelection(), text: '\n', forceMoveMarkers: true }]);
+    const model = editorRef.current.getModel();
+    const position = editorRef.current.getPosition();
+    if (!model || !position) return;
+
+    const lineContent = model.getLineContent(position.lineNumber);
+    // কার্সরের আগের অংশটুকু নিন
+    const textBeforeCursor = lineContent.substring(0, position.column - 1);
+    // আগের লাইনের শুরুতে কতটুকু হোয়াইট স্পেস (ট্যাব/স্পেস) আছে তা বের করুন
+    const match = textBeforeCursor.match(/^(\s*)/);
+    const indentation = match ? match[0] : '';
+
+    // নতুন লাইনে আগের ইনডেন্টেশনসহ Enter দিন
+    editorRef.current.executeEdits('', [{ 
+      range: editorRef.current.getSelection(), 
+      text: '\n' + indentation, 
+      forceMoveMarkers: true 
+    }]);
+    
     keepFocus();
   };
 
@@ -463,7 +481,7 @@ function App() {
     editorRef.current = editor;
     monacoRef.current = monaco;
 
-    // 👇 কাস্টম প্রিমিয়াম থিম ডিফাইন করা হলো 👇
+    // কাস্টম প্রিমিয়াম থিম
     monaco.editor.defineTheme('tech-dark', {
       base: 'vs-dark',
       inherit: true,
