@@ -3,17 +3,18 @@ import Editor from '@monaco-editor/react';
 import localforage from 'localforage';
 import JSZip from 'jszip';
 import LZString from 'lz-string';
-import prettier from 'prettier/standalone';
-import parserHtml from 'prettier/parser-html';
-import parserCss from 'prettier/parser-postcss';
-import parserBabel from 'prettier/parser-babel';
+import * as prettier from 'prettier/standalone';
+import * as parserHtml from 'prettier/plugins/html';
+import * as parserCss from 'prettier/plugins/postcss';
+import * as parserBabel from 'prettier/plugins/babel';
+import * as parserEstree from 'prettier/plugins/estree';
 import {
   FiCode, FiSave, FiFolder, FiMenu, FiPlus, FiUpload,
   FiX, FiPlay, FiSettings, FiCheckCircle, FiAlertCircle,
   FiDelete, FiCornerDownLeft, FiChevronsLeft, FiChevronsRight,
   FiSun, FiMoon, FiSearch, FiDownloadCloud, FiCopy, FiScissors,
   FiClipboard, FiTerminal, FiEdit2, FiAlignLeft, FiLink,
-  FiGithub, FiWifi, FiWifiOff, FiShare2, FiClock, FiCommand
+  FiWifiOff, FiShare2, FiClock, FiCommand
 } from 'react-icons/fi';
 import './App.css';
 
@@ -104,7 +105,6 @@ function App() {
   // ---------- Load from URL hash or localforage ----------
   useEffect(() => {
     const load = async () => {
-      // URL hash check (share feature)
       const hash = window.location.hash;
       if (hash.startsWith('#code=')) {
         try {
@@ -259,19 +259,20 @@ function App() {
     }
   };
 
-  // ---------- Format document ----------
+  // ---------- Format document (Prettier) ----------
   const handleFormat = async () => {
     if (!activeFile) return;
     try {
       const lang = activeFile.language;
       let parser = 'babel';
-      let plugins = [parserBabel];
+      let plugins = [parserBabel, parserEstree]; // JS/JSON এর জন্য estree লাগে
+
       if (lang === 'html') { parser = 'html'; plugins = [parserHtml]; }
       else if (lang === 'css') { parser = 'css'; plugins = [parserCss]; }
-      else if (lang === 'json') { parser = 'json'; plugins = [parserBabel]; }
-      else if (lang === 'markdown') { parser = 'markdown'; plugins = [parserBabel]; }
+      else if (lang === 'json') { parser = 'json'; plugins = [parserBabel, parserEstree]; }
+      else if (lang === 'markdown') { parser = 'markdown'; plugins = [parserBabel, parserEstree]; }
       else if (lang === 'python') {
-        showCustomAlert('info', 'Format', 'Python formatting not supported. Try HTML/CSS/JS/JSON.');
+        showCustomAlert('info', 'Format', 'Python formatting not supported.');
         return;
       }
 
