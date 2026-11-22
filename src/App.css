@@ -15,11 +15,17 @@ body, html, #root {
   user-select: none;
 }
 
+/* Flexbox Layout for Mobile Keyboard Fix */
 .app-container {
-  display: flex; flex-direction: column;
-  position: fixed; top: 0; bottom: 0; left: 0; right: 0;
-  width: 100vw; background-color: #0f172a; color: #e2e8f0;
+  display: flex;
+  flex-direction: column;
+  height: 100vh;
+  height: 100dvh; /* মোবাইলে কীবোর্ড ওপেন হলে ভিউপোর্ট অ্যাডজাস্ট করবে */
+  width: 100vw;
+  background-color: #0f172a;
+  color: #e2e8f0;
   transition: all 0.3s ease;
+  overflow: hidden;
 }
 
 /* Light Mode */
@@ -36,7 +42,6 @@ body, html, #root {
 .light-mode .custom-alert-box p { color: #64748b !important; }
 .light-mode .custom-context-menu { background: #ffffff; border-color: #e2e8f0; box-shadow: 0 4px 12px rgba(0,0,0,0.1); }
 .light-mode .custom-context-menu button { color: #0f172a; border-bottom: 1px solid #f1f5f9; }
-.light-mode .custom-context-menu button:hover { background: #f1f5f9; }
 
 /* Top Bar */
 .top-bar { display: flex; justify-content: space-between; align-items: center; background: rgba(30, 41, 59, 0.7); backdrop-filter: blur(12px); padding: 8px 12px; border-bottom: 1px solid rgba(255, 255, 255, 0.05); height: 56px; flex-shrink: 0; z-index: 20; }
@@ -48,8 +53,13 @@ body, html, #root {
 .icon-btn { background: linear-gradient(135deg, #38bdf8, #3b82f6); border: none; color: white; padding: 8px; border-radius: 6px; display: flex; align-items: center; justify-content: center; }
 .icon-btn.bg-transparent { background: transparent; color: inherit; border: 1px solid rgba(255, 255, 255, 0.1); }
 
-/* Main Content */
-.main-content { display: flex; flex: 1; position: relative; overflow: hidden; }
+/* Main Content - Crucial for Keyboard */
+.main-content { 
+  display: flex; 
+  flex: 1; /* বাকি জায়গা নেবে */
+  position: relative; 
+  overflow: hidden; 
+}
 
 /* Sidebar */
 .sidebar { position: absolute; left: -240px; top: 0; bottom: 0; width: 240px; background: rgba(15, 23, 42, 0.95); backdrop-filter: blur(10px); border-right: 1px solid rgba(255, 255, 255, 0.05); display: flex; flex-direction: column; transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1); z-index: 15; }
@@ -75,18 +85,27 @@ body, html, #root {
 .file-name { flex: 1; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .close-tab-btn { background: none; border: none; color: inherit; opacity: 0.5; display: flex; align-items: center; }
 
-/* Editor Section */
-.editor-section { flex: 1; display: flex; flex-direction: column; overflow: hidden; width: 100%; height: 100%; }
+/* Editor Section - Crucial for Keyboard */
+.editor-section { 
+  flex: 1; /* বাকি জায়গা নেবে */
+  display: flex; 
+  flex-direction: column; 
+  overflow: hidden; 
+  width: 100%; 
+  height: 100%; 
+}
 .editor-header { background: rgba(30, 41, 59, 0.4); padding: 6px 16px; font-size: 0.8rem; color: #94a3b8; font-family: 'JetBrains Mono', monospace; display: flex; align-items: center; gap: 8px; flex-shrink: 0; }
 .editor-wrapper { flex: 1; width: 100%; height: 100%; overflow: hidden; }
 .empty-state { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; color: #475569; gap: 16px; font-family: 'Outfit', sans-serif; }
 
-/* Mobile Custom Keyboard Toolbar */
+/* Mobile Custom Keyboard Toolbar - Crucial for Keyboard */
 .mobile-keyboard-toolbar {
   display: flex; justify-content: space-around; align-items: center;
   background: rgba(30, 41, 59, 0.95); padding: 8px 6px;
   border-top: 1px solid rgba(255, 255, 255, 0.1);
-  flex-shrink: 0; gap: 6px; z-index: 20;
+  flex-shrink: 0; /* এটি নিশ্চিত করবে টুলবার চেপে যাবে না */
+  gap: 6px; 
+  z-index: 20;
   position: relative; 
 }
 .mobile-keyboard-toolbar button {

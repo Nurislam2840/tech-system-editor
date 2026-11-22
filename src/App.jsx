@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import Editor from '@monaco-editor/react';
 import localforage from 'localforage';
-import JSZip from 'jszip'; // জিপ ফাইলের জন্য
+import JSZip from 'jszip';
 import { 
   FiCode, FiSave, FiFolder, FiMenu, FiPlus, FiUpload, 
   FiX, FiPlay, FiSettings, FiCheckCircle, FiAlertCircle, 
@@ -20,13 +20,13 @@ function App() {
   const [fontSize, setFontSize] = useState(14);
   const [searchQuery, setSearchQuery] = useState('');
   
-  // কনসোল লগ স্টেট
   const [consoleLogs, setConsoleLogs] = useState([]);
   const [showConsole, setShowConsole] = useState(false);
   
   const [alertConfig, setAlertConfig] = useState({ 
     visible: false, type: 'success', title: '', message: '', isPrompt: false, inputValue: '', onConfirm: null 
   });
+  
   const [contextMenu, setContextMenu] = useState({ visible: false, x: 0, y: 0, hasSelection: false });
   
   const fileInputRef = useRef(null);
@@ -116,7 +116,6 @@ function App() {
     }
   };
 
-  // জিপ ফাইলে সব ফাইল ডাউনলোড
   const handleExportZip = async () => {
     const zip = new JSZip();
     files.forEach(file => {
@@ -159,7 +158,6 @@ function App() {
     });
   };
 
-  // টেক্সট কপি, কাট, পেস্ট
   const handleCut = async () => {
     if (editorRef.current) {
       const text = editorRef.current.getModel().getValueInRange(editorRef.current.getSelection());
@@ -173,6 +171,7 @@ function App() {
       const text = editorRef.current.getModel().getValueInRange(editorRef.current.getSelection());
       await navigator.clipboard.writeText(text);
       setContextMenu({ ...contextMenu, visible: false });
+      showCustomAlert('success', 'Copied!', 'Selected text copied to clipboard.');
     }
   };
   const handlePaste = async () => {
@@ -182,7 +181,7 @@ function App() {
         editorRef.current.executeEdits('', [{ range: editorRef.current.getSelection(), text: text }]);
       }
     } catch (err) {
-      showCustomAlert('danger', 'Paste Failed', 'Your browser does not allow paste. Please use Ctrl+V or keyboard shortcut.');
+      showCustomAlert('danger', 'Paste Failed', 'Please allow clipboard access in browser settings.');
     }
     setContextMenu({ ...contextMenu, visible: false });
   };
@@ -199,6 +198,38 @@ function App() {
     }
   };
 
+  // মোবাইলের জন্য নিখুঁত Tab (৪টি স্পেস)
+  const handleMobileTab = () => {
+    if (editorRef.current) {
+      const selection = editorRef.current.getSelection();
+      if (!selection.isEmpty()) {
+        // যদি একাধিক লাইন সিলেক্ট থাকে, তবে সব লাইনে ৪টি স্পেস যোগ হবে
+        const model = editorRef.current.getModel();
+        const startLine = selection.startLineNumber;
+        const endLine = selection.endLineNumber;
+        const edits = [];
+        for (let i = startLine; i <= endLine; i++) {
+          edits.push({
+            range: new monacoRef.current.Range(i, 1, i, 1),
+            text: '    ', // ৪টি স্পেস
+            forceMoveMarkers: true
+          });
+        }
+        editorRef.current.executeEdits('', edits);
+      } else {
+        // সাধারণ কার্সরে ৪টি স্পেস বসবে
+        editorRef.current.trigger('keyboard', 'type', { text: '    ' });
+      }
+    }
+  };
+
+  const handleMobileEnter = () => {
+    if (editorRef.current) {
+      editorRef.current.trigger('keyboard', 'type', { text: '\n' });
+    }
+  };
+
+  // মোবাইলের জন্য নিখুঁত Delete (ফাঁকা লাইন হলে আগের লাইনে যাবে)
   const handleMobileDelete = () => {
     if (editorRef.current) {
       const position = editorRef.current.getPosition();
@@ -234,18 +265,6 @@ function App() {
     }
   };
 
-  const handleMobileEnter = () => {
-    if (editorRef.current) {
-      editorRef.current.trigger('keyboard', 'type', { text: '\n' });
-    }
-  };
-
-  const handleMobileTab = () => {
-    if (editorRef.current) {
-      editorRef.current.trigger('keyboard', 'type', { text: '  ' });
-    }
-  };
-
   const handleEditorDidMount = (editor, monaco) => {
     editorRef.current = editor;
     monacoRef.current = monaco;
@@ -258,7 +277,12 @@ function App() {
       const position = editor.getPosition();
       const coords = editor.getScrolledVisiblePosition(position);
       if (coords) {
-        setContextMenu({ visible: true, x: coords.left, y: coords.top + 30, hasSelection });
+        setContextMenu({ 
+          visible: true, 
+          x: Math.min(coords.left, window.innerWidth - 160), 
+          y: coords.top + 30, 
+          hasSelection 
+        });
       }
     });
     editor.onMouseDown(() => setContextMenu({ visible: false, x: 0, y: 0, hasSelection: false }));
@@ -272,7 +296,6 @@ function App() {
     let html = htmlFile ? htmlFile.content : '<h1>No HTML File Found</h1>';
     const css = cssFile ? `<style>${cssFile.content}</style>` : '';
     
-    // কনসোল লগ ক্যাপচার করার জন্য স্ক্রিপ্ট
     const consoleOverride = `
       <script>
         (function() {
@@ -295,7 +318,6 @@ function App() {
     return html;
   };
 
-  // কনসোল মেসেজ রিসিভ
   useEffect(() => {
     const handleMessage = (event) => {
       if (event.data && event.data.type === 'CONSOLE_LOG') {
@@ -397,12 +419,13 @@ function App() {
                     formatOnPaste: false, 
                     formatOnType: false, 
                     autoIndent: 'none', 
-                    tabSize: 2, 
+                    tabSize: 4, // ট্যাবের সাইজ ৪ স্পেস করা হলো
                     readOnly: false, 
                     domReadOnly: false, 
                     mouseWheelZoom: true, 
                     contextmenu: false, 
                     selectOnLineNumbers: true, 
+                    selectionHighlight: true, 
                     cursorBlinking: 'smooth', 
                     quickSuggestions: true, 
                     suggestOnTriggerCharacters: true, 
@@ -461,7 +484,6 @@ function App() {
         )}
       </main>
 
-      {/* Premium Context Menu */}
       {contextMenu.visible && (
         <div className="custom-context-menu" style={{ top: contextMenu.y, left: contextMenu.x }}>
           {contextMenu.hasSelection && (
