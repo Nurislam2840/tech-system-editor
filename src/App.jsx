@@ -93,6 +93,10 @@ function App() {
   };
   const closeAlert = () => setAlertConfig(prev => ({ ...prev, visible: false }));
 
+  // 👇👇 এই ২টি লাইন সবার উপরে নিয়ে আসা হয়েছে যাতে ReferenceError না হয় 👇👇
+  const activeFile = files.find(f => f.id === activeFileId);
+  const filteredFiles = files.filter(f => f.name.toLowerCase().includes(searchQuery.toLowerCase()));
+
   // ---------- Online / Offline ----------
   useEffect(() => {
     const on = () => setOnline(true);
@@ -163,9 +167,6 @@ function App() {
     if (!activeFile) { setShowUnsavedDot(false); return; }
     setShowUnsavedDot(savedFilesMap[activeFile.id] !== activeFile.content);
   }, [files, activeFile, savedFilesMap]);
-
-  const activeFile = files.find(f => f.id === activeFileId);
-  const filteredFiles = files.filter(f => f.name.toLowerCase().includes(searchQuery.toLowerCase()));
 
   // ---------- Content search (debounced) ----------
   useEffect(() => {
