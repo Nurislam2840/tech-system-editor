@@ -63,7 +63,9 @@ const logColor = (level) => {
 };
 
 function App() {
+  // 👇 সেটিংস (থিম, ফন্ট, লাইন হাইলাইট) লোকালফোরেজ থেকে লোড হবে
   const [theme, setTheme] = useState('tech-dark');
+  const [fontSize, setFontSize] = useState(14);
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [files, setFiles] = useState([]);
   const [activeFileId, setActiveFileId] = useState(null);
@@ -71,7 +73,6 @@ function App() {
   const [showSettings, setShowSettings] = useState(false);
   const [showCommandPalette, setShowCommandPalette] = useState(false);
   const [commandQuery, setCommandQuery] = useState('');
-  const [fontSize, setFontSize] = useState(14);
   const [searchQuery, setSearchQuery] = useState('');
   const [searchMode, setSearchMode] = useState('name');
   const [searchResults, setSearchResults] = useState([]);
@@ -103,6 +104,26 @@ function App() {
 
   const activeFile = files.find(f => f.id === activeFileId);
   const filteredFiles = files.filter(f => f.name.toLowerCase().includes(searchQuery.toLowerCase()));
+
+  // ১. অ্যাপ চালু হলে সেটিংস লোড করা
+  useEffect(() => {
+    const loadSettings = async () => {
+      const savedTheme = await localforage.getItem('techSystemTheme');
+      const savedFontSize = await localforage.getItem('techSystemFontSize');
+      if (savedTheme) setTheme(savedTheme);
+      if (savedFontSize) setFontSize(Number(savedFontSize));
+    };
+    loadSettings();
+  }, []);
+
+  // ২. সেটিংস পরিবর্তন হলে সেভ করা
+  useEffect(() => {
+    localforage.setItem('techSystemTheme', theme);
+  }, [theme]);
+  
+  useEffect(() => {
+    localforage.setItem('techSystemFontSize', fontSize);
+  }, [fontSize]);
 
   useEffect(() => {
     const on = () => setOnline(true);
@@ -419,7 +440,6 @@ function App() {
     keepFocus();
   };
 
-  // 👇 এখানে Smart Enter (Auto Indent) যোগ করা হয়েছে 👇
   const handleMobileEnter = () => {
     if (!editorRef.current) return;
     const model = editorRef.current.getModel();
@@ -427,13 +447,10 @@ function App() {
     if (!model || !position) return;
 
     const lineContent = model.getLineContent(position.lineNumber);
-    // কার্সরের আগের অংশটুকু নিন
     const textBeforeCursor = lineContent.substring(0, position.column - 1);
-    // আগের লাইনের শুরুতে কতটুকু হোয়াইট স্পেস (ট্যাব/স্পেস) আছে তা বের করুন
     const match = textBeforeCursor.match(/^(\s*)/);
     const indentation = match ? match[0] : '';
 
-    // নতুন লাইনে আগের ইনডেন্টেশনসহ Enter দিন
     editorRef.current.executeEdits('', [{ 
       range: editorRef.current.getSelection(), 
       text: '\n' + indentation, 
@@ -481,7 +498,7 @@ function App() {
     editorRef.current = editor;
     monacoRef.current = monaco;
 
-    // কাস্টম প্রিমিয়াম থিম
+    // কাস্টম প্রিমিয়াম থিম (Active Line Background সহ)
     monaco.editor.defineTheme('tech-dark', {
       base: 'vs-dark',
       inherit: true,
@@ -507,7 +524,8 @@ function App() {
         'editorLineNumber.foreground': '#858585',
         'editorLineNumber.activeForeground': '#C6C6C6',
         'editor.selectionBackground': '#264F78',
-        'editor.lineHighlightBackground': '#2A2D2E',
+        'editor.lineHighlightBackground': '#2A2D2E', // 👈 কার্সরের লাইনের আন্ডারগ্রাউন্ড বক্স
+        'editor.lineHighlightBorder': '#3a3d3e',    // 👈 হালকা বর্ডার
         'editorCursor.foreground': '#A7A7A7',
       }
     });
@@ -843,7 +861,7 @@ function App() {
                     fixedOverflowWidgets: true,
                     bracketPairColorization: { enabled: true },
                     guides: { bracketPairs: true, indentation: true },
-                    renderLineHighlight: 'all',
+                    renderLineHighlight: 'all', // 👈 কার্সরের লাইনে আন্ডারগ্রাউন্ড বক্স দেখাবে
                     renderWhitespace: 'selection',
                     find: { addExtraSpaceOnTop: false, autoFindInSelection: 'never', seedSearchStringFromSelection: 'always' },
                     snippetSuggestions: 'inline',
