@@ -18,7 +18,7 @@ import {
 } from 'react-icons/fi';
 import './App.css';
 
-// ---------- ফাইল আইকন ও ভাষা ----------
+// ---------- ৬০+ ভাষার সাপোর্ট এবং আইকন ----------
 const getFileIcon = (name) => {
   const n = name.toLowerCase();
   if (n.endsWith('.html') || n.endsWith('.htm')) return '🟧';
@@ -88,7 +88,6 @@ function App() {
     isPrompt: false, inputValue: '', onConfirm: null
   });
 
-  // 👇 সিলেকশন ধরে রাখার জন্য নতুন স্টেট 👇
   const [contextMenu, setContextMenu] = useState({ visible: false, x: 0, y: 0, hasSelection: false, fileId: null, selectionText: '' });
 
   const fileInputRef = useRef(null);
@@ -159,7 +158,8 @@ function App() {
           { id: '1', name: 'index.html', language: 'html', content: '<!DOCTYPE html>\n<html>\n<head>\n  <title>My App</title>\n</head>\n<body>\n  <h1 style="color: #38bdf8;">Hello Tech System!</h1>\n  <button onclick="testLog()">Click Me</button>\n</body>\n</html>' },
           { id: '2', name: 'style.css', language: 'css', content: 'body {\n    background: #0f172a;\n    color: white;\n    font-family: "Outfit", sans-serif;\n    padding: 20px;\n}' },
           { id: '3', name: 'app.js', language: 'javascript', content: 'console.log("App Running...");\n\nfunction testLog() {\n    console.log("Button clicked at: " + new Date().toLocaleTimeString());\n}' },
-          { id: '4', name: 'main.py', language: 'python', content: '# Python Example\ndef greet(name):\n    print(f"Hello, {name}!")\n\ngreet("Developer")' }
+          { id: '4', name: 'main.py', language: 'python', content: '# Python Example\ndef greet(name):\n    print(f"Hello, {name}!")\n\ngreet("Developer")' },
+          { id: '5', name: 'data.xml', language: 'xml', content: '<?xml version="1.0" encoding="UTF-8"?>\n<note>\n  <to>Tove</to>\n  <from>Jani</from>\n  <heading>Reminder</heading>\n  <body>Don\'t forget me this weekend!</body>\n</note>' }
         ];
         setFiles(defaults);
         setActiveFileId('1');
@@ -281,6 +281,10 @@ function App() {
       else if (lang === 'css') { parser = 'css'; plugins = [parserCss]; }
       else if (lang === 'json') { parser = 'json'; plugins = [parserBabel, parserEstree]; }
       else if (lang === 'markdown') { parser = 'markdown'; plugins = [parserBabel, parserEstree]; }
+      else if (lang === 'xml') { 
+        showCustomAlert('info', 'Formatting', 'XML auto-formatting is not supported yet.');
+        return;
+      }
       else if (!['javascript', 'typescript'].includes(lang)) {
         showCustomAlert('info', 'Formatting', `Auto-formatting is best supported for HTML, CSS, JS, JSON.`);
         return;
@@ -349,7 +353,7 @@ function App() {
     });
   };
 
-  // ---------- 👇 কপি-পেস্ট ফাংশন (সিলেকশন ধরে রাখার জন্য ফিক্সড) 👇 ----------
+  // ---------- কপি-পেস্ট ফাংশন ----------
   const handleCut = async () => {
     if (contextMenu.selectionText) {
       try {
@@ -465,7 +469,7 @@ function App() {
 
   const insertSnippet = (text) => {
     if (!editorRef.current) return;
-    editorRef.current.executeEdits('', [{ range: editorRef.current.getSelection(), text, forceMoveMarkers: true }]);
+    editorRef.current.executeEdits('', [{ range: editorRef.current.getSelection(), text, forceMoveMovemarkers: true }]);
     keepFocus();
   };
 
@@ -504,12 +508,10 @@ function App() {
       }
     });
 
-    // 👇 কনটেক্সট মেনুতে সিলেকশন টেক্সট সেভ করা হচ্ছে 👇
     editor.onContextMenu((e) => {
       e.event.preventDefault();
       const selection = editor.getSelection();
       const hasSelection = selection && !selection.isEmpty();
-      // সিলেক্ট করা টেক্সটটি এখানে ধরে রাখছি
       const selectedText = hasSelection ? editor.getModel().getValueInRange(selection) : '';
       
       const position = editor.getPosition();
@@ -547,7 +549,83 @@ function App() {
     }
   };
 
+  // 👇👇 XML লাইভ প্রিভিউ সিস্টেম এখানে যুক্ত করা হলো 👇👇
   const getPreviewContent = () => {
+    // যদি XML ফাইল হয়
+    if (activeFile?.language === 'xml' || activeFile?.name.endsWith('.xml')) {
+      // XML-কে সুন্দর করে দেখানোর জন্য একটি HTML টেমপ্লেট
+      return `
+        <!DOCTYPE html>
+        <html>
+          <head>
+            <meta charset="UTF-8">
+            <meta name="viewport" content="width=device-width, initial-scale=1.0">
+            <style>
+              body { 
+                background: #0f172a; 
+                color: #e2e8f0; 
+                font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; 
+                padding: 20px; 
+                margin: 0;
+              }
+              .xml-container {
+                background: #1e293b;
+                border-radius: 12px;
+                padding: 16px;
+                box-shadow: 0 4px 20px rgba(0,0,0,0.5);
+                overflow-x: auto;
+              }
+              .xml-code {
+                font-family: 'Courier New', Courier, monospace;
+                font-size: 14px;
+                line-height: 1.6;
+                white-space: pre-wrap;
+                word-wrap: break-word;
+                color: #38bdf8;
+              }
+              .tag { color: #569CD6; }
+              .attr-name { color: #9CDCFE; }
+              .attr-value { color: #CE9178; }
+              .text { color: #D4D4D4; }
+              .comment { color: #6A9955; font-style: italic; }
+              .cdata { color: #f59e0b; }
+              .header {
+                display: flex;
+                justify-content: space-between;
+                align-items: center;
+                margin-bottom: 16px;
+                padding-bottom: 12px;
+                border-bottom: 1px solid rgba(255,255,255,0.1);
+              }
+              .header h2 {
+                margin: 0;
+                font-size: 18px;
+                color: #94a3b8;
+                font-weight: 500;
+              }
+              .header .status {
+                font-size: 12px;
+                background: rgba(34, 197, 94, 0.2);
+                color: #4ade80;
+                padding: 4px 10px;
+                border-radius: 20px;
+              }
+            </style>
+          </head>
+          <body>
+            <div class="header">
+              <h2>📜 XML Live Preview</h2>
+              <span class="status">Rendered</span>
+            </div>
+            <div class="xml-container">
+              <pre class="xml-code">${escapeHTML(activeFile.content)}</pre>
+            </div>
+          </body>
+        </html>
+      `;
+    }
+
+    // যদি HTML/JS/CSS ফাইল হয় (আগের মতোই)
     const htmlFile = files.find(f => f.name.endsWith('.html') || f.name.endsWith('.htm'));
     const cssFiles = files.filter(f => f.name.endsWith('.css'));
     const jsFiles = files.filter(f => f.name.endsWith('.js') && !f.name.endsWith('.json'));
@@ -596,6 +674,16 @@ function App() {
     if (hasBody) html = html.replace(/<\/body>/i, `${js}</body>`);
     else html = html + js;
     return html;
+  };
+
+  // HTML এস্কেপ করার ছোট ফাংশন
+  const escapeHTML = (str) => {
+    return str
+      .replace(/&/g, '&amp;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;')
+      .replace(/"/g, '&quot;')
+      .replace(/'/g, '&#39;');
   };
 
   useEffect(() => {
@@ -734,7 +822,7 @@ function App() {
               };
               reader.readAsText(file);
               e.target.value = null;
-            }} style={{ display: 'none' }} accept=".js,.jsx,.ts,.tsx,.html,.css,.json,.py,.md,.txt" />
+            }} style={{ display: 'none' }} accept=".js,.jsx,.ts,.tsx,.html,.css,.json,.py,.md,.txt,.xml" />
           </div>
 
           {searchMode === 'content' && searchResults.length > 0 && (
@@ -825,7 +913,7 @@ function App() {
                     tabSize: 4,
                     readOnly: false,
                     mouseWheelZoom: true,
-                    contextmenu: false, // কাস্টম মেনুর জন্য বন্ধ
+                    contextmenu: false,
                     selectOnLineNumbers: true,
                     selectionHighlight: true,
                     cursorBlinking: 'smooth',
@@ -862,7 +950,7 @@ function App() {
               </div>
 
               <div className="snippet-bar">
-                {['()', '{}', '[]', '""', "''", ';', '=>', '${}', '/* */', '//'].map(s => (
+                {['()', '{}', '[]', '""', "''", ';', '=>', '${}', '/* */', '//', '<>', '</>'].map(s => (
                   <button key={s} onMouseDown={e => e.preventDefault()} onTouchStart={e => e.preventDefault()}
                     onClick={() => insertSnippet(s)}>{s}</button>
                 ))}
@@ -880,7 +968,7 @@ function App() {
         {showPreview && (
           <div className="preview-panel">
             <div className="preview-header">
-              <span>Live Preview</span>
+              <span>Live Preview {activeFile?.language === 'xml' && '(XML)'}</span>
               <div style={{ display: 'flex', gap: '8px' }}>
                 <button onClick={() => setShowConsole(!showConsole)} style={{ fontSize: '0.8rem' }}>
                   <FiTerminal /> Console {consoleLogs.length > 0 && <span className="console-badge">{consoleLogs.length}</span>}
