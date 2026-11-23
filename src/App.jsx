@@ -18,7 +18,7 @@ import {
 } from 'react-icons/fi';
 import './App.css';
 
-// ---------- ৬০+ ভাষার সাপোর্ট এবং আইকন ----------
+// ---------- ফাইল আইকন ও ভাষা ----------
 const getFileIcon = (name) => {
   const n = name.toLowerCase();
   if (n.endsWith('.html') || n.endsWith('.htm')) return '🟧';
@@ -117,6 +117,7 @@ function App() {
   useEffect(() => {
     localforage.setItem('techSystemTheme', theme);
   }, [theme]);
+  
   useEffect(() => {
     localforage.setItem('techSystemFontSize', fontSize);
   }, [fontSize]);
@@ -222,7 +223,7 @@ function App() {
           suggestedName: activeFile.name,
           types: [{
             description: 'Code Files',
-            accept: { 'text/plain': ['.txt'], 'text/html': ['.html'], 'text/css': ['.css'], 'text/javascript': ['.js'], 'application/json': ['.json'], 'text/x-python': ['.py'] },
+            accept: { 'text/plain': ['.txt'], 'text/html': ['.html'], 'text/css': ['.css'], 'text/javascript': ['.js'], 'application/json': ['.json'], 'text/x-python': ['.py'], 'text/xml': ['.xml'] },
           }],
         });
         const writable = await fileHandle.createWritable();
@@ -469,7 +470,7 @@ function App() {
 
   const insertSnippet = (text) => {
     if (!editorRef.current) return;
-    editorRef.current.executeEdits('', [{ range: editorRef.current.getSelection(), text, forceMoveMovemarkers: true }]);
+    editorRef.current.executeEdits('', [{ range: editorRef.current.getSelection(), text, forceMoveMarkers: true }]);
     keepFocus();
   };
 
@@ -497,14 +498,19 @@ function App() {
         { token: 'metatag', foreground: '569CD6' }
       ],
       colors: {
-        'editor.background': '#1e1e1e',
-        'editor.foreground': '#D4D4D4',
-        'editorLineNumber.foreground': '#858585',
-        'editorLineNumber.activeForeground': '#C6C6C6',
+        'editor.background': '#0d1117',
+        'editor.foreground': '#c9d1d9',
+        'editorLineNumber.foreground': '#484f58',
+        'editorLineNumber.activeForeground': '#c9d1d9',
         'editor.selectionBackground': '#264F78',
-        'editor.lineHighlightBackground': '#2A2D2E',
-        'editor.lineHighlightBorder': '#3a3d3e',
-        'editorCursor.foreground': '#A7A7A7',
+        'editor.inactiveSelectionBackground': '#3a3d41',
+        'editor.lineHighlightBackground': '#161b22',
+        'editor.lineHighlightBorder': '#30363d',
+        'editorCursor.foreground': '#58a6ff',
+        'editorIndentGuide.background': '#21262d',
+        'editorIndentGuide.activeBackground': '#30363d',
+        'editorBracketMatch.background': '#3b4048',
+        'editorBracketMatch.border': '#c9d1d9',
       }
     });
 
@@ -549,11 +555,8 @@ function App() {
     }
   };
 
-  // 👇👇 XML লাইভ প্রিভিউ সিস্টেম এখানে যুক্ত করা হলো 👇👇
   const getPreviewContent = () => {
-    // যদি XML ফাইল হয়
     if (activeFile?.language === 'xml' || activeFile?.name.endsWith('.xml')) {
-      // XML-কে সুন্দর করে দেখানোর জন্য একটি HTML টেমপ্লেট
       return `
         <!DOCTYPE html>
         <html>
@@ -562,18 +565,19 @@ function App() {
             <meta name="viewport" content="width=device-width, initial-scale=1.0">
             <style>
               body { 
-                background: #0f172a; 
-                color: #e2e8f0; 
+                background: #0d1117; 
+                color: #c9d1d9; 
                 font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; 
                 padding: 20px; 
                 margin: 0;
               }
               .xml-container {
-                background: #1e293b;
+                background: #161b22;
                 border-radius: 12px;
                 padding: 16px;
                 box-shadow: 0 4px 20px rgba(0,0,0,0.5);
                 overflow-x: auto;
+                border: 1px solid #30363d;
               }
               .xml-code {
                 font-family: 'Courier New', Courier, monospace;
@@ -583,19 +587,13 @@ function App() {
                 word-wrap: break-word;
                 color: #38bdf8;
               }
-              .tag { color: #569CD6; }
-              .attr-name { color: #9CDCFE; }
-              .attr-value { color: #CE9178; }
-              .text { color: #D4D4D4; }
-              .comment { color: #6A9955; font-style: italic; }
-              .cdata { color: #f59e0b; }
               .header {
                 display: flex;
                 justify-content: space-between;
                 align-items: center;
                 margin-bottom: 16px;
                 padding-bottom: 12px;
-                border-bottom: 1px solid rgba(255,255,255,0.1);
+                border-bottom: 1px solid #30363d;
               }
               .header h2 {
                 margin: 0;
@@ -625,7 +623,6 @@ function App() {
       `;
     }
 
-    // যদি HTML/JS/CSS ফাইল হয় (আগের মতোই)
     const htmlFile = files.find(f => f.name.endsWith('.html') || f.name.endsWith('.htm'));
     const cssFiles = files.filter(f => f.name.endsWith('.css'));
     const jsFiles = files.filter(f => f.name.endsWith('.js') && !f.name.endsWith('.json'));
@@ -676,7 +673,6 @@ function App() {
     return html;
   };
 
-  // HTML এস্কেপ করার ছোট ফাংশন
   const escapeHTML = (str) => {
     return str
       .replace(/&/g, '&amp;')
