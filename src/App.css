@@ -12,8 +12,8 @@ body, html, #root {
   width: 100%;
   overflow: hidden;
   font-family: 'Outfit', sans-serif;
-  user-select: none;
-  -webkit-user-select: none;
+  user-select: text;
+  -webkit-user-select: text;
   overscroll-behavior: none;
   background-color: #0f172a;
 }

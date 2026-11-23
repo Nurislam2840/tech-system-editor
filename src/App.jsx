@@ -18,7 +18,7 @@ import {
 } from 'react-icons/fi';
 import './App.css';
 
-// ---------- ৬০+ ভাষার সাপোর্ট এবং আইকন ----------
+// ---------- ফাইল আইকন ও ভাষা ----------
 const getFileIcon = (name) => {
   const n = name.toLowerCase();
   if (n.endsWith('.html') || n.endsWith('.htm')) return '🟧';
@@ -63,7 +63,6 @@ const logColor = (level) => {
 };
 
 function App() {
-  // 👇 সেটিংস (থিম, ফন্ট, লাইন হাইলাইট) লোকালফোরেজ থেকে লোড হবে
   const [theme, setTheme] = useState('tech-dark');
   const [fontSize, setFontSize] = useState(14);
   const [sidebarOpen, setSidebarOpen] = useState(false);
@@ -89,7 +88,8 @@ function App() {
     isPrompt: false, inputValue: '', onConfirm: null
   });
 
-  const [contextMenu, setContextMenu] = useState({ visible: false, x: 0, y: 0, hasSelection: false, fileId: null });
+  // 👇 সিলেকশন ধরে রাখার জন্য নতুন স্টেট 👇
+  const [contextMenu, setContextMenu] = useState({ visible: false, x: 0, y: 0, hasSelection: false, fileId: null, selectionText: '' });
 
   const fileInputRef = useRef(null);
   const editorRef = useRef(null);
@@ -105,7 +105,6 @@ function App() {
   const activeFile = files.find(f => f.id === activeFileId);
   const filteredFiles = files.filter(f => f.name.toLowerCase().includes(searchQuery.toLowerCase()));
 
-  // ১. অ্যাপ চালু হলে সেটিংস লোড করা
   useEffect(() => {
     const loadSettings = async () => {
       const savedTheme = await localforage.getItem('techSystemTheme');
@@ -116,11 +115,9 @@ function App() {
     loadSettings();
   }, []);
 
-  // ২. সেটিংস পরিবর্তন হলে সেভ করা
   useEffect(() => {
     localforage.setItem('techSystemTheme', theme);
   }, [theme]);
-  
   useEffect(() => {
     localforage.setItem('techSystemFontSize', fontSize);
   }, [fontSize]);
@@ -143,7 +140,7 @@ function App() {
             const urlFile = { id: 'url-' + Date.now(), name: 'shared.html', language: 'html', content: decoded };
             setFiles([urlFile]);
             setActiveFileId(urlFile.id);
-            showCustomAlert('success', 'Imported from URL', 'Shared code loaded. Edit and save!');
+            showCustomAlert('success', 'Imported from URL', 'Shared code loaded.');
             window.history.replaceState(null, '', window.location.pathname);
             return;
           }
@@ -161,7 +158,7 @@ function App() {
         const defaults = [
           { id: '1', name: 'index.html', language: 'html', content: '<!DOCTYPE html>\n<html>\n<head>\n  <title>My App</title>\n</head>\n<body>\n  <h1 style="color: #38bdf8;">Hello Tech System!</h1>\n  <button onclick="testLog()">Click Me</button>\n</body>\n</html>' },
           { id: '2', name: 'style.css', language: 'css', content: 'body {\n    background: #0f172a;\n    color: white;\n    font-family: "Outfit", sans-serif;\n    padding: 20px;\n}' },
-          { id: '3', name: 'app.js', language: 'javascript', content: 'console.log("App Running...");\n\nfunction testLog() {\n    console.log("Button clicked at: " + new Date().toLocaleTimeString());\n    console.warn("This is a warning");\n    console.error("This is an error demo");\n}' },
+          { id: '3', name: 'app.js', language: 'javascript', content: 'console.log("App Running...");\n\nfunction testLog() {\n    console.log("Button clicked at: " + new Date().toLocaleTimeString());\n}' },
           { id: '4', name: 'main.py', language: 'python', content: '# Python Example\ndef greet(name):\n    print(f"Hello, {name}!")\n\ngreet("Developer")' }
         ];
         setFiles(defaults);
@@ -225,14 +222,7 @@ function App() {
           suggestedName: activeFile.name,
           types: [{
             description: 'Code Files',
-            accept: {
-              'text/plain': ['.txt'],
-              'text/html': ['.html'],
-              'text/css': ['.css'],
-              'text/javascript': ['.js'],
-              'application/json': ['.json'],
-              'text/x-python': ['.py'],
-            },
+            accept: { 'text/plain': ['.txt'], 'text/html': ['.html'], 'text/css': ['.css'], 'text/javascript': ['.js'], 'application/json': ['.json'], 'text/x-python': ['.py'] },
           }],
         });
         const writable = await fileHandle.createWritable();
@@ -292,16 +282,12 @@ function App() {
       else if (lang === 'json') { parser = 'json'; plugins = [parserBabel, parserEstree]; }
       else if (lang === 'markdown') { parser = 'markdown'; plugins = [parserBabel, parserEstree]; }
       else if (!['javascript', 'typescript'].includes(lang)) {
-        showCustomAlert('info', 'Formatting', `Auto-formatting is best supported for HTML, CSS, JS, JSON. ${lang.toUpperCase()} formatting is not fully supported.`);
+        showCustomAlert('info', 'Formatting', `Auto-formatting is best supported for HTML, CSS, JS, JSON.`);
         return;
       }
 
       const formatted = await prettier.format(activeFile.content, {
-        parser,
-        plugins,
-        tabWidth: 4,
-        singleQuote: true,
-        semi: true,
+        parser, plugins, tabWidth: 4, singleQuote: true, semi: true,
       });
       handleCodeChange(formatted);
       showCustomAlert('success', 'Formatted!', `${activeFile.name} formatted successfully.`);
@@ -313,12 +299,7 @@ function App() {
   const handleCreateNewFile = () => {
     showCustomAlert('info', 'New File', 'Enter file name (e.g. script.py, app.java):', true, (fileName) => {
       if (!fileName) return;
-      const newFile = {
-        id: Date.now().toString(),
-        name: fileName,
-        language: getLanguage(fileName),
-        content: ''
-      };
+      const newFile = { id: Date.now().toString(), name: fileName, language: getLanguage(fileName), content: '' };
       setFiles(prev => [...prev, newFile]);
       setActiveFileId(newFile.id);
       setSidebarOpen(false);
@@ -357,12 +338,7 @@ function App() {
         if (!res.ok) throw new Error(`HTTP ${res.status}`);
         const text = await res.text();
         const fileName = url.split('/').pop().split('?')[0] || 'imported.txt';
-        const newFile = {
-          id: Date.now().toString(),
-          name: fileName,
-          language: getLanguage(fileName),
-          content: text
-        };
+        const newFile = { id: Date.now().toString(), name: fileName, language: getLanguage(fileName), content: text };
         setFiles(prev => [...prev, newFile]);
         setActiveFileId(newFile.id);
         setSidebarOpen(false);
@@ -373,26 +349,26 @@ function App() {
     });
   };
 
-  // ---------- Clipboard actions ----------
+  // ---------- 👇 কপি-পেস্ট ফাংশন (সিলেকশন ধরে রাখার জন্য ফিক্সড) 👇 ----------
   const handleCut = async () => {
-    if (!editorRef.current) return;
-    try {
-      const selection = editorRef.current.getSelection();
-      const text = editorRef.current.getModel().getValueInRange(selection);
-      await navigator.clipboard.writeText(text);
-      editorRef.current.executeEdits('', [{ range: selection, text: '' }]);
-    } catch { showCustomAlert('danger', 'Cut failed', 'Clipboard denied.'); }
+    if (contextMenu.selectionText) {
+      try {
+        await navigator.clipboard.writeText(contextMenu.selectionText);
+        if (editorRef.current) {
+          editorRef.current.executeEdits('', [{ range: editorRef.current.getSelection(), text: '' }]);
+        }
+      } catch { showCustomAlert('danger', 'Cut failed', 'Clipboard denied.'); }
+    }
     setContextMenu(c => ({ ...c, visible: false }));
   };
 
   const handleCopy = async () => {
-    if (!editorRef.current) return;
-    try {
-      const selection = editorRef.current.getSelection();
-      const text = editorRef.current.getModel().getValueInRange(selection);
-      await navigator.clipboard.writeText(text);
-      showCustomAlert('success', 'Copied!', 'Text copied to clipboard.');
-    } catch { showCustomAlert('danger', 'Copy failed', 'Clipboard denied.'); }
+    if (contextMenu.selectionText) {
+      try {
+        await navigator.clipboard.writeText(contextMenu.selectionText);
+        showCustomAlert('success', 'Copied!', 'Text copied to clipboard.');
+      } catch { showCustomAlert('danger', 'Copy failed', 'Clipboard denied.'); }
+    }
     setContextMenu(c => ({ ...c, visible: false }));
   };
 
@@ -416,7 +392,7 @@ function App() {
     setContextMenu(c => ({ ...c, visible: false }));
   };
 
-  // ---------- Mobile keyboard helpers ----------
+  // ---------- মোবাইল কিবোর্ড হেল্পার ----------
   const keepFocus = () => { if (editorRef.current) editorRef.current.focus(); };
   const safeRange = (sl, sc, el, ec) => {
     if (monacoRef.current?.Range) return new monacoRef.current.Range(sl, sc, el, ec);
@@ -456,7 +432,6 @@ function App() {
       text: '\n' + indentation, 
       forceMoveMarkers: true 
     }]);
-    
     keepFocus();
   };
 
@@ -498,7 +473,6 @@ function App() {
     editorRef.current = editor;
     monacoRef.current = monaco;
 
-    // কাস্টম প্রিমিয়াম থিম (Active Line Background সহ)
     monaco.editor.defineTheme('tech-dark', {
       base: 'vs-dark',
       inherit: true,
@@ -524,16 +498,20 @@ function App() {
         'editorLineNumber.foreground': '#858585',
         'editorLineNumber.activeForeground': '#C6C6C6',
         'editor.selectionBackground': '#264F78',
-        'editor.lineHighlightBackground': '#2A2D2E', // 👈 কার্সরের লাইনের আন্ডারগ্রাউন্ড বক্স
-        'editor.lineHighlightBorder': '#3a3d3e',    // 👈 হালকা বর্ডার
+        'editor.lineHighlightBackground': '#2A2D2E',
+        'editor.lineHighlightBorder': '#3a3d3e',
         'editorCursor.foreground': '#A7A7A7',
       }
     });
 
+    // 👇 কনটেক্সট মেনুতে সিলেকশন টেক্সট সেভ করা হচ্ছে 👇
     editor.onContextMenu((e) => {
       e.event.preventDefault();
       const selection = editor.getSelection();
       const hasSelection = selection && !selection.isEmpty();
+      // সিলেক্ট করা টেক্সটটি এখানে ধরে রাখছি
+      const selectedText = hasSelection ? editor.getModel().getValueInRange(selection) : '';
+      
       const position = editor.getPosition();
       const coords = position ? editor.getScrolledVisiblePosition(position) : null;
       
@@ -543,7 +521,8 @@ function App() {
           x: Math.min(coords.left, window.innerWidth - 180),
           y: Math.min(coords.top + 30, window.innerHeight - 260),
           hasSelection,
-          fileId: activeFileId
+          fileId: activeFileId,
+          selectionText: selectedText
         });
       } else {
         setContextMenu({
@@ -551,7 +530,8 @@ function App() {
           x: (e.event.posx || window.innerWidth / 2) - 80,
           y: (e.event.posy || window.innerHeight / 2) - 100,
           hasSelection,
-          fileId: activeFileId
+          fileId: activeFileId,
+          selectionText: selectedText
         });
       }
     });
@@ -787,7 +767,7 @@ function App() {
                 onClick={() => { setActiveFileId(file.id); setSidebarOpen(false); }}
                 onContextMenu={(e) => {
                   e.preventDefault();
-                  setContextMenu({ visible: true, x: e.clientX, y: e.clientY, hasSelection: false, fileId: file.id });
+                  setContextMenu({ visible: true, x: e.clientX, y: e.clientY, hasSelection: false, fileId: file.id, selectionText: '' });
                 }}
               >
                 <span className="file-icon">{getFileIcon(file.name)}</span>
@@ -845,7 +825,7 @@ function App() {
                     tabSize: 4,
                     readOnly: false,
                     mouseWheelZoom: true,
-                    contextmenu: false,
+                    contextmenu: false, // কাস্টম মেনুর জন্য বন্ধ
                     selectOnLineNumbers: true,
                     selectionHighlight: true,
                     cursorBlinking: 'smooth',
@@ -861,7 +841,7 @@ function App() {
                     fixedOverflowWidgets: true,
                     bracketPairColorization: { enabled: true },
                     guides: { bracketPairs: true, indentation: true },
-                    renderLineHighlight: 'all', // 👈 কার্সরের লাইনে আন্ডারগ্রাউন্ড বক্স দেখাবে
+                    renderLineHighlight: 'all',
                     renderWhitespace: 'selection',
                     find: { addExtraSpaceOnTop: false, autoFindInSelection: 'never', seedSearchStringFromSelection: 'always' },
                     snippetSuggestions: 'inline',
