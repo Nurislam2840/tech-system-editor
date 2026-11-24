@@ -1,4 +1,4 @@
-const CACHE_NAME = 'tech-system-v6.9';
+const CACHE_NAME = 'tech-system-v3.0.0';
 const ASSETS = ['/', '/index.html'];
 
 self.addEventListener('install', (e) => {
@@ -17,12 +17,9 @@ self.addEventListener('activate', (e) => {
 });
 
 self.addEventListener('fetch', (e) => {
-  // শুধু GET request handle করুন
   if (e.request.method !== 'GET') return;
-  // chrome-extension, data:, blob: বাদ দিন
   if (!e.request.url.startsWith('http')) return;
 
-  // Navigation request → network-first (নতুন build আসবে)
   if (e.request.mode === 'navigate') {
     e.respondWith(
       fetch(e.request)
@@ -36,7 +33,6 @@ self.addEventListener('fetch', (e) => {
     return;
   }
 
-  // Static assets → stale-while-revalidate
   e.respondWith(
     caches.match(e.request).then((cached) => {
       const fetchPromise = fetch(e.request)
