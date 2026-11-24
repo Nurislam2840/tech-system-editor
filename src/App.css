@@ -18,9 +18,8 @@ body, html, #root {
   background-color: #0f172a;
 }
 
-/* Input zoom prevention on iOS */
 input, select, textarea {
-  font-size: 16px;
+  font-size: 16px; /* iOS Zoom Prevent */
 }
 
 /* ============================================
@@ -67,7 +66,7 @@ input, select, textarea {
 .light-mode .status-left, .light-mode .status-right { color: #64748b; }
 
 /* ============================================
-   TOP BAR — Premium Glass
+   TOP BAR
    ============================================ */
 .top-bar {
   display: flex;
@@ -76,7 +75,7 @@ input, select, textarea {
   background: rgba(15, 23, 42, 0.85);
   backdrop-filter: blur(20px);
   -webkit-backdrop-filter: blur(20px);
-  padding: 10px 12px;
+  padding: 10px 16px;
   padding-top: calc(10px + env(safe-area-inset-top, 0px));
   border-bottom: 1px solid rgba(255, 255, 255, 0.08);
   height: 60px;
@@ -115,7 +114,7 @@ input, select, textarea {
   -webkit-background-clip: text; background-clip: text;
   -webkit-text-fill-color: transparent; white-space: nowrap;
 }
-.actions { display: flex; gap: 6px; align-items: center; flex-shrink: 1; }
+.actions { display: flex; gap: 8px; align-items: center; flex-shrink: 1; }
 .icon-btn {
   background: linear-gradient(135deg, #38bdf8, #3b82f6);
   border: none; color: white; padding: 8px; border-radius: 10px;
@@ -175,6 +174,24 @@ input, select, textarea {
   animation: fadeIn 0.3s ease;
 }
 @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+
+/* ============================================
+   DESKTOP SIDEBAR RESPONSIVENESS
+   ============================================ */
+@media (min-width: 768px) {
+  .sidebar {
+    position: relative; 
+    left: 0;
+    transform: translateX(0);
+    box-shadow: none;
+    z-index: 10;
+  }
+  .sidebar.open { transform: translateX(0); }
+  .menu-btn { display: none; }
+  .overlay { display: none; }
+  .main-content { flex-direction: row; }
+  .editor-section { flex: 1; }
+}
 
 .sidebar-header {
   padding: 16px 20px; font-size: 0.85rem; font-weight: 700;
@@ -511,39 +528,41 @@ input, select, textarea {
 }
 
 /* ============================================
-   CONTEXT MENU, MODALS, ALERTS
+   CONTEXT MENU, MODALS, ALERTS (App-Like Menus)
    ============================================ */
 .custom-context-menu {
   position: fixed;
-  background: rgba(22, 27, 34, 0.98);
-  backdrop-filter: blur(20px);
-  -webkit-backdrop-filter: blur(20px);
-  border: 1px solid #30363d;
-  border-radius: 14px;
-  box-shadow: 0 10px 40px rgba(0, 0, 0, 0.6);
+  background: rgba(22, 27, 34, 0.85);
+  backdrop-filter: blur(24px) saturate(180%);
+  -webkit-backdrop-filter: blur(24px) saturate(180%);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 16px;
+  box-shadow: 0 10px 40px rgba(0, 0, 0, 0.6), inset 0 1px 0 rgba(255,255,255,0.1);
   display: flex; flex-direction: column;
   z-index: 500; overflow: hidden;
-  min-width: 180px; padding: 6px;
-  animation: popIn 0.15s ease;
+  min-width: 200px; padding: 6px;
+  animation: menuPop 0.2s cubic-bezier(0.175, 0.885, 0.32, 1.275);
 }
+@keyframes menuPop { from { transform: scale(0.9); opacity: 0; } to { transform: scale(1); opacity: 1; } }
 .custom-context-menu button {
   display: flex; align-items: center; gap: 12px;
   background: transparent; border: none;
   color: #c9d1d9; padding: 12px 16px;
-  text-align: left; font-size: 0.9rem;
+  text-align: left; font-size: 0.95rem;
   font-weight: 500; border-radius: 10px; cursor: pointer;
-  transition: background 0.15s;
+  transition: all 0.15s ease;
 }
-.custom-context-menu button:active {
+.custom-context-menu button:hover, .custom-context-menu button:active {
   background: rgba(56, 189, 248, 0.15);
   color: #58a6ff;
+  transform: translateX(2px);
 }
 .text-red { color: #ef4444 !important; }
-.text-red:active { background: rgba(239, 68, 68, 0.15) !important; }
+.text-red:hover, .text-red:active { background: rgba(239, 68, 68, 0.15) !important; color: #fca5a5 !important; }
 
 .modal-overlay {
   position: fixed; inset: 0;
-  background: rgba(0,0,0,0.7);
+  background: rgba(0,0,0,0.6);
   backdrop-filter: blur(8px);
   -webkit-backdrop-filter: blur(8px);
   z-index: 400;
@@ -552,11 +571,11 @@ input, select, textarea {
 }
 .custom-alert-box {
   background: #161b22; width: 100%; max-width: 340px;
-  border-radius: 20px; border: 1px solid #30363d;
+  border-radius: 24px; border: 1px solid rgba(255,255,255,0.1);
   padding: 28px;
   display: flex; flex-direction: column; align-items: center;
   text-align: center;
-  box-shadow: 0 20px 50px rgba(0,0,0,0.6);
+  box-shadow: 0 20px 50px rgba(0,0,0,0.6), inset 0 1px 0 rgba(255,255,255,0.1);
   animation: popIn 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
 }
 @keyframes popIn {
@@ -605,10 +624,10 @@ input, select, textarea {
 
 /* Command Palette */
 .command-palette {
-  background: #161b22;
+  background: rgba(22, 27, 34, 0.95);
   backdrop-filter: blur(20px);
   width: 100%; max-width: 500px;
-  border-radius: 16px; border: 1px solid #30363d;
+  border-radius: 16px; border: 1px solid rgba(255,255,255,0.1);
   overflow: hidden;
   box-shadow: 0 20px 50px rgba(0,0,0,0.6);
 }
@@ -634,7 +653,7 @@ input, select, textarea {
   border-radius: 10px; cursor: pointer;
   transition: background 0.15s;
 }
-.cp-item:active { background: rgba(56, 189, 248, 0.15); color: #58a6ff; }
+.cp-item:hover, .cp-item:active { background: rgba(56, 189, 248, 0.15); color: #58a6ff; }
 .cp-recent {
   margin-left: auto;
   font-size: 0.65rem; color: #64748b;
@@ -647,7 +666,7 @@ input, select, textarea {
 /* Settings Modal */
 .modal-content {
   background: #161b22; width: 100%; max-width: 400px;
-  border-radius: 20px; border: 1px solid #30363d;
+  border-radius: 20px; border: 1px solid rgba(255,255,255,0.1);
   overflow: hidden;
   box-shadow: 0 20px 50px rgba(0,0,0,0.6);
 }
@@ -766,7 +785,7 @@ input, select, textarea {
 }
 ::-webkit-scrollbar-thumb:hover { background: rgba(148, 163, 184, 0.5); }
 
-/* Responsive */
+/* Responsive adjustments */
 @media (max-width: 400px) {
   .logo h1 { font-size: 0.95rem; }
   .icon-btn { padding: 7px; }

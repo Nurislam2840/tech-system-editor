@@ -572,12 +572,10 @@ function App() {
       }
     });
 
-    // Cursor position tracking
     editor.onDidChangeCursorPosition((e) => {
       setCursorPos({ line: e.position.lineNumber, col: e.position.column });
     });
 
-    // Selection tracking
     editor.onDidChangeCursorSelection((e) => {
       const model = editor.getModel();
       if (!model) return;
@@ -590,7 +588,6 @@ function App() {
       }
     });
 
-    // কাস্টম কনটেক্সট মেনু হ্যান্ডলার
     const openContextMenu = (e) => {
       if (e && e.event) e.event.preventDefault();
       const selection = editor.getSelection();
@@ -616,7 +613,7 @@ function App() {
 
       setContextMenu({
         visible: true,
-        x: Math.max(10, Math.min(x, window.innerWidth - 180)),
+        x: Math.max(10, Math.min(x, window.innerWidth - 200)),
         y: Math.max(10, Math.min(y, window.innerHeight - 260)),
         hasSelection,
         fileId: null,
@@ -626,14 +623,13 @@ function App() {
 
     editor.onContextMenu(openContextMenu);
 
-    // মোবাইলে লং প্রেস ডিটেক্ট করার জন্য
     let touchTimer;
     editor.onMouseDown((e) => {
       setContextMenu(c => ({ ...c, visible: false }));
       if (e.event.browserEvent && e.event.browserEvent.pointerType === 'touch') {
         touchTimer = setTimeout(() => {
           openContextMenu();
-        }, 500); // ৫০০ মিলিসেকেন্ড পর লং প্রেস
+        }, 500);
       }
     });
 
@@ -958,7 +954,6 @@ function App() {
                     e.preventDefault();
                     setContextMenu({ visible: true, x: e.clientX, y: e.clientY, hasSelection: false, fileId: file.id, selectionText: '' });
                   }}
-                  // মোবাইলে ফাইলে লং প্রেস করলে রিনেম/ডিলিট আসবে
                   onTouchStart={(e) => {
                     const timer = setTimeout(() => {
                       setContextMenu({ visible: true, x: e.touches[0].clientX, y: e.touches[0].clientY, hasSelection: false, fileId: file.id, selectionText: '' });
