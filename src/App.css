@@ -786,10 +786,40 @@ input, select, textarea {
 ::-webkit-scrollbar-thumb:hover { background: rgba(148, 163, 184, 0.5); }
 
 /* Responsive adjustments */
-@media (max-width: 400px) {
-  .logo h1 { font-size: 0.95rem; }
-  .icon-btn { padding: 7px; }
-  .mobile-keyboard-toolbar button { font-size: 0.8rem; min-height: 40px; }
-  .actions { gap: 4px; }
-  .toolbar-group { gap: 4px; }
+@media (max-width: 600px) {
+  .top-bar {
+    padding: 10px 6px;
+    gap: 2px;
+  }
+  .logo { gap: 4px; }
+  .logo h1 { display: none; } /* মোবাইলে লেখা লুকিয়ে শুধু আইকন দেখাবে */
+  .logo-brand { gap: 4px; }
+  .icon-btn { 
+    padding: 6px; 
+    border-radius: 8px;
+  }
+  .actions { 
+    gap: 4px; 
+    flex-shrink: 1;
+  }
+  .menu-btn { padding: 6px; }
+  .mobile-keyboard-toolbar button { 
+    font-size: 0.75rem; 
+    min-height: 40px; 
+    padding: 8px 2px;
+  }
+  .status-bar {
+    font-size: 0.65rem;
+    padding: 6px 8px;
+    gap: 4px;
+    height: 30px;
+  }
+  .status-left, .status-right { gap: 6px; }
+  .editor-header {
+    padding: 6px 10px;
+    font-size: 0.75rem;
+  }
+  .editor-actions button {
+    padding: 4px;
+  }
 }

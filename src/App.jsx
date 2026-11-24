@@ -588,11 +588,14 @@ function App() {
       }
     });
 
-    const openContextMenu = (e) => {
+    // কাস্টম কনটেক্সট মেনু ওপেন করার ফাংশন
+    const openContextMenu = (e, forceSelection = false) => {
       if (e && e.event) e.event.preventDefault();
+      
       const selection = editor.getSelection();
-      const hasSelection = selection && !selection.isEmpty();
-      const selectedText = hasSelection ? editor.getModel().getValueInRange(selection) : '';
+      const model = editor.getModel();
+      const hasSelection = forceSelection || (selection && !selection.isEmpty());
+      const selectedText = hasSelection && model ? model.getValueInRange(selection) : '';
       
       let x = window.innerWidth / 2;
       let y = window.innerHeight / 2;
@@ -615,21 +618,28 @@ function App() {
         visible: true,
         x: Math.max(10, Math.min(x, window.innerWidth - 200)),
         y: Math.max(10, Math.min(y, window.innerHeight - 260)),
-        hasSelection,
+        hasSelection: hasSelection,
         fileId: null,
         selectionText: selectedText
       });
     };
 
-    editor.onContextMenu(openContextMenu);
+    // Desktop Right Click
+    editor.onContextMenu((e) => openContextMenu(e, false));
 
+    // Mobile Long Press logic (সিলেক্ট করার পর মেনু আসবে)
     let touchTimer;
     editor.onMouseDown((e) => {
       setContextMenu(c => ({ ...c, visible: false }));
       if (e.event.browserEvent && e.event.browserEvent.pointerType === 'touch') {
         touchTimer = setTimeout(() => {
-          openContextMenu();
-        }, 500);
+          const selection = editor.getSelection();
+          const hasSelection = selection && !selection.isEmpty();
+          // যদি কিছু সিলেক্ট করা থাকে, তবেই মেনু ওপেন হবে
+          if (hasSelection) {
+            openContextMenu(null, true);
+          }
+        }, 600);
       }
     });
 
