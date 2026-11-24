@@ -281,7 +281,6 @@ function App() {
         flashSaved();
       }
     } catch (err) { console.log('Save cancelled', err); }
-    // eslint-disable-next-line
   }, [activeFile, showCustomAlert]);
 
   const handleExportZip = async () => {
@@ -1028,7 +1027,7 @@ function App() {
                       <button onMouseDown={e => e.preventDefault()} onTouchStart={e => e.preventDefault()}
                         onClick={() => { editorRef.current?.trigger('keyboard', 'undo'); keepFocus(); }} aria-label="Undo"><FiChevronsLeft /></button>
                       <button onMouseDown={e => e.preventDefault()} onTouchStart={e => e.preventDefault()}
-                        onClick={() => editorRef.current?.trigger('keyboard', 'redo'); keepFocus()} aria-label="Redo"><FiChevronsRight /></button>
+                        onClick={() => { editorRef.current?.trigger('keyboard', 'redo'); keepFocus(); }} aria-label="Redo"><FiChevronsRight /></button>
                     </div>
                     <div className="toolbar-divider" />
                     <div className="toolbar-group">
