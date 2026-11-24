@@ -15,13 +15,12 @@ import {
   FiSun, FiMoon, FiSearch, FiDownloadCloud, FiCopy, FiScissors,
   FiClipboard, FiTerminal, FiEdit2, FiAlignLeft, FiLink,
   FiWifiOff, FiShare2, FiClock, FiCommand, FiCheck, FiMaximize2,
-  FiMinimize2, FiMonitor, FiSmartphone, FiTablet, FiFilter,
-  FiZap, FiRefreshCw, FiFileText, FiMoreVertical, FiTrash2
+  FiMinimize2, FiMonitor, FiSmartphone, FiTablet,
+  FiZap, FiFileText, FiTrash2
 } from 'react-icons/fi';
 import './App.css';
 
 // ---------- Constants ----------
-const SIDEBAR_WIDTH = 280;
 const FONT_MIN = 12;
 const FONT_MAX = 24;
 const DEFAULT_FONT = 14;
@@ -591,48 +590,60 @@ function App() {
       }
     });
 
-    editor.onContextMenu((e) => {
-      e.event.preventDefault();
+    // কাস্টম কনটেক্সট মেনু হ্যান্ডলার
+    const openContextMenu = (e) => {
+      if (e && e.event) e.event.preventDefault();
       const selection = editor.getSelection();
       const hasSelection = selection && !selection.isEmpty();
       const selectedText = hasSelection ? editor.getModel().getValueInRange(selection) : '';
-      const position = editor.getPosition();
-      const coords = position ? editor.getScrolledVisiblePosition(position) : null;
-      if (coords) {
-        setContextMenu({
-          visible: true,
-          x: Math.min(coords.left, window.innerWidth - 180),
-          y: Math.min(coords.top + 30, window.innerHeight - 260),
-          hasSelection, fileId: activeFileId, selectionText: selectedText
-        });
+      
+      let x = window.innerWidth / 2;
+      let y = window.innerHeight / 2;
+
+      if (e && e.event && e.event.posx !== undefined) {
+        x = e.event.posx;
+        y = e.event.posy;
       } else {
-        setContextMenu({
-          visible: true,
-          x: (e.event.posx || window.innerWidth / 2) - 80,
-          y: (e.event.posy || window.innerHeight / 2) - 100,
-          hasSelection, fileId: activeFileId, selectionText: selectedText
-        });
+        const position = editor.getPosition();
+        if (position) {
+          const coords = editor.getScrolledVisiblePosition(position);
+          if (coords) {
+            x = coords.left;
+            y = coords.top + 30;
+          }
+        }
+      }
+
+      setContextMenu({
+        visible: true,
+        x: Math.max(10, Math.min(x, window.innerWidth - 180)),
+        y: Math.max(10, Math.min(y, window.innerHeight - 260)),
+        hasSelection,
+        fileId: null,
+        selectionText: selectedText
+      });
+    };
+
+    editor.onContextMenu(openContextMenu);
+
+    // মোবাইলে লং প্রেস ডিটেক্ট করার জন্য
+    let touchTimer;
+    editor.onMouseDown((e) => {
+      setContextMenu(c => ({ ...c, visible: false }));
+      if (e.event.browserEvent && e.event.browserEvent.pointerType === 'touch') {
+        touchTimer = setTimeout(() => {
+          openContextMenu();
+        }, 500); // ৫০০ মিলিসেকেন্ড পর লং প্রেস
       }
     });
 
     editor.onMouseUp(() => {
-      const selection = editor.getSelection();
-      if (selection && !selection.isEmpty()) {
-        const selectedText = editor.getModel().getValueInRange(selection);
-        const position = editor.getPosition();
-        const coords = position ? editor.getScrolledVisiblePosition(position) : null;
-        if (coords) {
-          setContextMenu({
-            visible: true,
-            x: Math.min(coords.left, window.innerWidth - 180),
-            y: Math.min(coords.top + 30, window.innerHeight - 260),
-            hasSelection: true, fileId: activeFileId, selectionText: selectedText
-          });
-        }
-      }
+      if (touchTimer) clearTimeout(touchTimer);
     });
-
-    editor.onMouseDown(() => setContextMenu(c => ({ ...c, visible: false })));
+    
+    editor.onMouseMove(() => {
+      if (touchTimer) clearTimeout(touchTimer);
+    });
 
     if (window.visualViewport) {
       window.visualViewport.addEventListener('resize', () => {
@@ -947,6 +958,14 @@ function App() {
                     e.preventDefault();
                     setContextMenu({ visible: true, x: e.clientX, y: e.clientY, hasSelection: false, fileId: file.id, selectionText: '' });
                   }}
+                  // মোবাইলে ফাইলে লং প্রেস করলে রিনেম/ডিলিট আসবে
+                  onTouchStart={(e) => {
+                    const timer = setTimeout(() => {
+                      setContextMenu({ visible: true, x: e.touches[0].clientX, y: e.touches[0].clientY, hasSelection: false, fileId: file.id, selectionText: '' });
+                    }, 500);
+                    e.currentTarget.ontouchend = () => clearTimeout(timer);
+                    e.currentTarget.ontouchmove = () => clearTimeout(timer);
+                  }}
                 >
                   <span className="drag-handle">⋮⋮</span>
                   <span className="file-icon">{getFileIcon(file.name)}</span>
@@ -1132,7 +1151,7 @@ function App() {
               <button onClick={handleDeleteSelection} className="text-red"><FiX size={14} /> Delete</button>
             </>
           )}
-          {!contextMenu.fileId && <button onClick={handlePaste}><FiClipboard size={14} /> Paste</button>}
+          {!contextMenu.fileId && !contextMenu.hasSelection && <button onClick={handlePaste}><FiClipboard size={14} /> Paste</button>}
           <button onClick={handleSelectAll}><FiCode size={14} /> Select All</button>
         </div>
       )}
