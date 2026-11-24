@@ -544,6 +544,27 @@ function App() {
       }
     });
     
+    // মোবাইলে টেক্সট সিলেক্ট করে ছেড়ে দিলে কপি মেনু দেখানুর জন্য
+    editor.onMouseUp((e) => {
+      const selection = editor.getSelection();
+      if (selection && !selection.isEmpty()) {
+        const selectedText = editor.getModel().getValueInRange(selection);
+        const position = editor.getPosition();
+        const coords = position ? editor.getScrolledVisiblePosition(position) : null;
+        
+        if (coords) {
+          setContextMenu({
+            visible: true,
+            x: Math.min(coorde.left, window.innerWidth - 180),
+            y: Math.min(coords.top + 30, window.innerHeight - 260),
+            hasSelection: true,
+            fileId: activeFileId,
+            selectionText: selectedText
+          });
+        }
+      }
+    });
+    
     editor.onMouseDown(() => setContextMenu(c => ({ ...c, visible: false })));
 
     if (window.visualViewport) {
