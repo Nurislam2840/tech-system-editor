@@ -3,6 +3,7 @@
   "short_name": "CodeX",
   "description": "A powerful, offline-capable code editor for mobile and desktop.",
   "start_url": "/",
+  " scope": "/",
   "display": "standalone",
   "orientation": "any",
   "background_color": "#0f172a",
