@@ -260,7 +260,7 @@ function App() {
           suggestedName: activeFile.name,
           types: [{
             description: 'Code Files',
-            accept: { 'text/plain': ['.txt'], 'text/html': ['.html'], 'text/css': ['.css'], 'text/javascript': ['.js'], 'application/json': ['.json'], 'text/x-python': ['.py'], 'text/xml': ['.xml'] },
+            accept: { 'text/plain': ['.txt', '.html', '.css', '.js', '.json', '.py', '.xml', '.md'] },
           }],
         });
         const writable = await fileHandle.createWritable();
@@ -269,17 +269,28 @@ function App() {
         showCustomAlert('success', 'Saved!', 'File saved to your phone.');
         flashSaved();
       } else {
-        const blob = new Blob([activeFile.content], { type: 'text/plain' });
+        let mimeType = 'text/plain';
+        if (activeFile.name.endsWith('.html')) mimeType = 'text/html';
+        else if (activeFile.name.endsWith('.css')) mimeType = 'text/css';
+        else if (activeFile.name.endsWith('.js')) mimeType = 'application/javascript';
+        else if (activeFile.name.endsWith('.json')) mimeType = 'application/json';
+        else if (activeFile.name.endsWith('.xml')) mimeType = 'application/xml';
+
+        const blob = new Blob([activeFile.content], { type: mimeType });
         const url = URL.createObjectURL(blob);
         const a = document.createElement('a');
         a.href = url;
         a.download = activeFile.name;
+        document.body.appendChild(a);
         a.click();
+        document.body.removeChild(a);
         URL.revokeObjectURL(url);
         showCustomAlert('success', 'Downloaded!', 'File downloaded successfully.');
         flashSaved();
       }
-    } catch (err) { console.log('Save cancelled', err); }
+    } catch (err) { 
+      if (err.name !== 'AbortError') console.log('Save cancelled', err); 
+    }
   }, [activeFile, showCustomAlert]);
 
   const handleExportZip = async () => {
@@ -536,58 +547,49 @@ function App() {
     editorRef.current = editor;
     monacoRef.current = monaco;
 
-    // নতুন প্রিমিয়াম কালার থিম (One Dark Pro স্টাইল)
+    // নতুন প্রিমিয়াম কালার থিম (ল্যাঙ্গুয়েজ অনুযায়ী আলাদা ৪-৫টি কালার)
     monaco.editor.defineTheme('tech-dark', {
       base: 'vs-dark',
       inherit: true,
       rules: [
-        // কমেন্ট: ধূসর-সবুজ (চোখে আরামদায়ক)
-        { token: 'comment', foreground: '7A8B7A', fontStyle: 'italic' },
-        { token: 'comment.html', foreground: '7A8B7A', fontStyle: 'italic' },
-        { token: 'comment.css', foreground: '7A8B7A', fontStyle: 'italic' },
-        
-        // কিওয়ার্ড: পার্পল/ভায়োলেট (যেমন: const, if, return, import)
-        { token: 'keyword', foreground: 'C792EA' },
-        { token: 'keyword.control', foreground: 'C792EA' },
-        
-        // স্ট্রিং (টেক্সট): সফট গ্রিন (যেমন: "hello", 'world')
-        { token: 'string', foreground: 'C3E88D' },
-        { token: 'string.html', foreground: 'C3E88D' },
-        
-        // নাম্বার: কমলা/গোল্ডেন
-        { token: 'number', foreground: 'F78C6C' },
-        
-        // ফাংশন: লাইট ব্লু/সায়ান (যেমন: console.log, myFunction)
-        { token: 'function', foreground: '82AAFF' },
+        // ---------- সাধারণ (Common) ----------
+        { token: '', foreground: 'D4D4D4' },
         { token: 'identifier', foreground: 'D4D4D4' },
-        
-        // ভেরিয়েবল: হালকা সায়ান
-        { token: 'variable', foreground: '89DDFF' },
-        { token: 'variable.predefined', foreground: '89DDFF' },
-        
-        // টাইপ/ক্লাস: হলুদ/গোল্ডেন
-        { token: 'type', foreground: 'FFCB6B' },
-        { token: 'class', foreground: 'FFCB6B' },
-        
-        // HTML ট্যাগ: পিংক/ম্যাজেন্টা
-        { token: 'tag', foreground: 'F07178' },
-        { token: 'metatag', foreground: 'F07178' },
-        { token: 'delimiter.html', foreground: '89DDFF' },
-        
-        // HTML অ্যাট্রিবিউট: হলুদ এবং সায়ান
-        { token: 'attribute.name', foreground: 'FFCB6B' },
-        { token: 'attribute.value', foreground: 'C3E88D' },
-        
-        // অপারেটর: হালকা সায়ান
-        { token: 'operator', foreground: '89DDFF' },
-        
-        // ব্র্যাকেট/ডেলিমিটার
         { token: 'delimiter', foreground: 'A6ACCD' },
-        
-        // CSS প্রপার্টি
-        { token: 'attribute.name.css', foreground: 'F07178' },
-        { token: 'attribute.value.css', foreground: 'C3E88D' },
-        { token: 'attribute.value.number.css', foreground: 'F78C6C' },
+        { token: 'comment', foreground: '7A8B7A', fontStyle: 'italic' }, // কমেন্ট (সব জায়গায়)
+
+        // ==========================================
+        // ১. HTML কালার (লাল, হলুদ, সবুজ, সায়ান)
+        // ==========================================
+        { token: 'tag', foreground: 'F07178' }, // ট্যাগ: লাল/পিংক (যেমন: <div>, <body>)
+        { token: 'metatag', foreground: 'F07178' },
+        { token: 'attribute.name', foreground: 'FFCB6B' }, // অ্যাট্রিবিউট: হলুদ (যেমন: class, id)
+        { token: 'attribute.value', foreground: 'C3E88D' }, // ভ্যালু: সফট গ্রিন (যেমন: "container")
+        { token: 'delimiter.html', foreground: '89DDFF' }, // ব্র্যাকেট: সায়ান (যেমন: < > /)
+
+        // ==========================================
+        // ২. CSS কালার (পিংক, সবুজ, কমলা, সায়ান)
+        // ==========================================
+        { token: 'attribute.name.css', foreground: 'F07178' }, // প্রপার্টি: লাল/পিংক (যেমন: margin, color)
+        { token: 'attribute.value.css', foreground: 'C3E88D' }, // ভ্যালু: সফট গ্রিন (যেমন: solid, sans-serif)
+        { token: 'attribute.value.number.css', foreground: 'F78C6C' }, // নাম্বার: কমলা (যেমন: 10, 100)
+        { token: 'attribute.value.unit.css', foreground: 'F78C6C' }, // ইউনিট: কমলা (যেমন: px, em, %)
+        { token: 'attribute.value.hex.css', foreground: '89DDFF' }, // হেক্স কালার: সায়ান (যেমন: #ffffff)
+        { token: 'tag.css', foreground: 'C792EA' }, // ক্লাস/আইডি: পার্পল (যেমন: .container, #root)
+
+        // ==========================================
+        // ৩. JavaScript কালার (পার্পল, নীল, সবুজ, কমলা)
+        // ==========================================
+        { token: 'keyword', foreground: 'C792EA' }, // কিওয়ার্ড: পার্পল (যেমন: const, let, if, return)
+        { token: 'keyword.control', foreground: 'C792EA' },
+        { token: 'function', foreground: '82AAFF' }, // ফাংশন: নীল (যেমন: console.log, myFunc)
+        { token: 'variable', foreground: '89DDFF' }, // ভেরিয়েবল: সায়ান (যেমন: myVar)
+        { token: 'variable.predefined', foreground: '89DDFF' },
+        { token: 'string', foreground: 'C3E88D' }, // স্ট্রিং: সফট গ্রিন (যেমন: "hello")
+        { token: 'number', foreground: 'F78C6C' }, // নাম্বার: কমলা (যেমন: 123)
+        { token: 'type', foreground: 'FFCB6B' }, // টাইপ: হলুদ (যেমন: Array, Object)
+        { token: 'class', foreground: 'FFCB6B' },
+        { token: 'operator', foreground: '89DDFF' }, // অপারেটর: সায়ান (যেমন: +, -, =)
       ],
       colors: {
         'editor.background': '#0d1117',
@@ -603,8 +605,6 @@ function App() {
         'editorIndentGuide.activeBackground': '#4B5263',
         'editorBracketMatch.background': '#3E4451',
         'editorBracketMatch.border': '#528BFF',
-        
-        // UI কালার
         'editorWidget.background': '#1E222A',
         'editorSuggestWidget.background': '#1E222A',
         'editorSuggestWidget.selectedBackground': '#2C313C',
