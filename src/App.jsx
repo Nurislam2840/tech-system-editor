@@ -253,44 +253,66 @@ function App() {
   };
 
   const handleSaveToPhone = useCallback(async () => {
-    if (!activeFile) return;
-    try {
-      if ('showSaveFilePicker' in window) {
-        const fileHandle = await window.showSaveFilePicker({
-          suggestedName: activeFile.name,
-          types: [{
-            description: 'Code Files',
-            accept: { 'text/plain': ['.txt', '.html', '.css', '.js', '.json', '.py', '.xml', '.md'] },
-          }],
-        });
-        const writable = await fileHandle.createWritable();
-        await writable.write(activeFile.content);
-        await writable.close();
-        showCustomAlert('success', 'Saved!', 'File saved to your phone.');
-        flashSaved();
-      } else {
-        let mimeType = 'text/plain';
-        if (activeFile.name.endsWith('.html')) mimeType = 'text/html';
-        else if (activeFile.name.endsWith('.css')) mimeType = 'text/css';
-        else if (activeFile.name.endsWith('.js')) mimeType = 'application/javascript';
-        else if (activeFile.name.endsWith('.json')) mimeType = 'application/json';
-        else if (activeFile.name.endsWith('.xml')) mimeType = 'application/xml';
-
-        const blob = new Blob([activeFile.content], { type: mimeType });
-        const url = URL.createObjectURL(blob);
-        const a = document.createElement('a');
-        a.href = url;
-        a.download = activeFile.name;
-        document.body.appendChild(a);
-        a.click();
-        document.body.removeChild(a);
-        URL.revokeObjectURL(url);
-        showCustomAlert('success', 'Downloaded!', 'File downloaded successfully.');
-        flashSaved();
-      }
-    } catch (err) { 
-      if (err.name !== 'AbortError') console.log('Save cancelled', err); 
-    }
+  if (!activeFile) return;
+  
+  const fileName = activeFile.name;
+  const ext = fileName.split('.').pop().toLowerCase();
+  
+  // সঠিক MIME টাইপ নির্ধারণ (এটি .json সমস্যা দূর করবে)
+  let mimeType = 'text/plain';
+  if (ext === 'html' || ext === 'htm') mimeType = 'text/html';
+  else if (ext === 'css') mimeType = 'text/css';
+  else if (ext === 'js' || ext === 'jsx') mimeType = 'application/javascript';
+  else if (ext === 'json') mimeType = 'application/json';
+  else if (ext === 'xml') mimeType = 'application/xml';
+  else if (ext === 'py') mimeType = 'text/x-python';
+  else if (ext === 'md') mimeType = 'text/markdown';
+  
+  try {
+  // ডেস্কটপের জন্য File System Access API
+  if ('showSaveFilePicker' in window && window.isSecureContext) {
+  try {
+  const fileHandle = await window.showSaveFilePicker({
+  suggestedName: fileName,
+  types: [{
+  description: 'Code Files',
+  accept: { [mimeType]: ['.' + ext] },
+  }],
+  });
+  const writable = await fileHandle.createWritable();
+  await writable.write(activeFile.content);
+  await writable.close();
+  showCustomAlert('success', 'Saved!', 'File saved to your phone.');
+  flashSaved();
+  return;
+  } catch (err) {
+  if (err.name === 'AbortError') return; // ইউজার ক্যানসেল করলে
+  }
+  }
+  
+  // মোবাইল ব্রাউজারের জন্য Base64 Data URI পদ্ধতি
+  // btoa() ব্যবহার করা হচ্ছে যাতে অ্যান্ড্রয়েড ব্রাউজার একে সঠিক ফাইল হিসেবে চিনে
+  const base64Content = btoa(unescape(encodeURIComponent(activeFile.content)));
+  const dataUri = `data:${mimeType};base64,${base64Content}`;
+  
+  const a = document.createElement('a');
+  a.href = dataUri;
+  a.download = fileName; // এখানে সঠিক ফাইল নাম পাস হচ্ছে
+  a.style.display = 'none';
+  document.body.appendChild(a);
+  a.click();
+  
+  setTimeout(() => {
+  document.body.removeChild(a);
+  }, 100);
+  
+  showCustomAlert('success', 'Downloaded!', `${fileName} saved successfully.`);
+  flashSaved();
+  
+  } catch (error) {
+  console.error('Save error:', error);
+  showCustomAlert('danger', 'Save Failed', 'Could not save file.');
+  }
   }, [activeFile, showCustomAlert]);
 
   const handleExportZip = async () => {
