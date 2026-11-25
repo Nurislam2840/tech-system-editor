@@ -19,3 +19,12 @@ ReactDOM.createRoot(document.getElementById('root')).render(
     <App />
   </React.StrictMode>,
 )
+
+// React লোড হওয়ার পর স্প্ল্যাশ স্ক্রিন রিমুভ করা
+setTimeout(() => {
+  const splash = document.getElementById('splash-screen');
+  if (splash) {
+    splash.style.opacity = '0';
+    setTimeout(() => splash.remove(), 500); // ফেড আউট হওয়ার পর রিমুভ
+  }
+}, 1500); // ১.৫ সেকেন্ড পর রিমুভ হবে

@@ -20,9 +20,7 @@ import {
 } from 'react-icons/fi';
 import './App.css';
 
-// ==========================================
-// কনস্ট্যান্ট এবং হেল্পার ফাংশন
-// ==========================================
+// ---------- Constants ----------
 const FONT_MIN = 12;
 const FONT_MAX = 24;
 const DEFAULT_FONT = 14;
@@ -217,7 +215,7 @@ function App() {
         setSavedFilesMap(map);
       } else {
         const defaults = [
-          { id: '1', name: 'index.html', language: 'html', content: '<!DOCTYPE html>\n<html>\n<head>\n  <title>My App</title>\n</head>\n<body>\n  <h1 style="color: #38bdf8;">Hello Tech System!</h1>\n  <button onclick="testLog()">Click Me</button>\n</body>\n</html>' },
+          { id: '1', name: 'index.html', language: 'html', content: '<!DOCTYPE html>\n<html>\n<head>\n  <title>My App</title>\n</head>\n<body>\n  <h1 style="color: #38bdf8;">Hello CodeX!</h1>\n  <button onclick="testLog()">Click Me</button>\n</body>\n</html>' },
           { id: '2', name: 'style.css', language: 'css', content: 'body {\n    background: #0f172a;\n    color: white;\n    font-family: "Outfit", sans-serif;\n    padding: 20px;\n}' },
           { id: '3', name: 'app.js', language: 'javascript', content: 'console.log("App Running...");\n\nfunction testLog() {\n    console.log("Button clicked at: " + new Date().toLocaleTimeString());\n}' }
         ];
@@ -377,7 +375,7 @@ function App() {
     const url = URL.createObjectURL(content);
     const a = document.createElement('a');
     a.href = url;
-    a.download = 'tech-system-project.zip';
+    a.download = 'codex-project.zip';
     a.click();
     URL.revokeObjectURL(url);
     showCustomAlert('success', 'Exported!', 'Project exported as ZIP archive.');
@@ -619,65 +617,60 @@ function App() {
     editorRef.current = editor;
     monacoRef.current = monaco;
 
-    // নতুন প্রিমিয়াম কালার থিম
+    // নতুন প্রিমিয়াম কালার থিম (CodeX Palette)
     monaco.editor.defineTheme('tech-dark', {
       base: 'vs-dark',
       inherit: true,
       rules: [
-        { token: '', foreground: 'D4D4D4' },
-        { token: 'identifier', foreground: 'D4D4D4' },
-        { token: 'delimiter', foreground: 'A6ACCD' },
-        { token: 'comment', foreground: '7A8B7A', fontStyle: 'italic' },
+        { token: '', foreground: 'E2E8F0' },
+        { token: 'identifier', foreground: 'E2E8F0' },
+        { token: 'delimiter', foreground: '94A3B8' },
+        { token: 'comment', foreground: '64748B', fontStyle: 'italic' },
 
         // HTML
-        { token: 'tag', foreground: 'F07178' },
-        { token: 'metatag', foreground: 'F07178' },
-        { token: 'attribute.name', foreground: 'FFCB6B' },
-        { token: 'attribute.value', foreground: 'C3E88D' },
-        { token: 'delimiter.html', foreground: '89DDFF' },
+        { token: 'tag', foreground: 'F472B6' },
+        { token: 'metatag', foreground: 'F472B6' },
+        { token: 'attribute.name', foreground: 'FBBF24' },
+        { token: 'attribute.value', foreground: '34D399' },
+        { token: 'delimiter.html', foreground: '38BDF8' },
 
         // CSS
-        { token: 'attribute.name.css', foreground: 'F07178' },
-        { token: 'attribute.value.css', foreground: 'C3E88D' },
-        { token: 'attribute.value.number.css', foreground: 'F78C6C' },
-        { token: 'attribute.value.unit.css', foreground: 'F78C6C' },
-        { token: 'attribute.value.hex.css', foreground: '89DDFF' },
-        { token: 'tag.css', foreground: 'C792EA' },
+        { token: 'attribute.name.css', foreground: 'F472B6' },
+        { token: 'attribute.value.css', foreground: '34D399' },
+        { token: 'attribute.value.number.css', foreground: 'FB923C' },
+        { token: 'attribute.value.unit.css', foreground: 'FB923C' },
+        { token: 'attribute.value.hex.css', foreground: '38BDF8' },
+        { token: 'tag.css', foreground: 'A78BFA' },
 
         // JS
-        { token: 'keyword', foreground: 'C792EA' },
-        { token: 'keyword.control', foreground: 'C792EA' },
-        { token: 'function', foreground: '82AAFF' },
-        { token: 'variable', foreground: '89DDFF' },
-        { token: 'variable.predefined', foreground: '89DDFF' },
-        { token: 'string', foreground: 'C3E88D' },
-        { token: 'number', foreground: 'F78C6C' },
-        { token: 'type', foreground: 'FFCB6B' },
-        { token: 'class', foreground: 'FFCB6B' },
-        { token: 'operator', foreground: '89DDFF' },
+        { token: 'keyword', foreground: 'A78BFA' },
+        { token: 'keyword.control', foreground: 'A78BFA' },
+        { token: 'function', foreground: '60A5FA' },
+        { token: 'variable', foreground: '38BDF8' },
+        { token: 'variable.predefined', foreground: '38BDF8' },
+        { token: 'string', foreground: '34D399' },
+        { token: 'number', foreground: 'FB923C' },
+        { token: 'type', foreground: 'FBBF24' },
+        { token: 'class', foreground: 'FBBF24' },
+        { token: 'operator', foreground: '38BDF8' },
       ],
       colors: {
-        'editor.background': '#0d1117',
-        'editor.foreground': '#d4d4d4',
-        'editorLineNumber.foreground': '#4B5263',
-        'editorLineNumber.activeForeground': '#C792EA',
-        'editor.selectionBackground': '#3E4451',
-        'editor.inactiveSelectionBackground': '#3a3d41',
-        'editor.lineHighlightBackground': '#1E222A',
-        'editor.lineHighlightBorder': '#282C34',
-        'editorCursor.foreground': '#528BFF',
-        'editorIndentGuide.background': '#2C313C',
-        'editorIndentGuide.activeBackground': '#4B5263',
-        'editorBracketMatch.background': '#3E4451',
-        'editorBracketMatch.border': '#528BFF',
-        'editorWidget.background': '#1E222A',
-        'editorSuggestWidget.background': '#1E222A',
-        'editorSuggestWidget.selectedBackground': '#2C313C',
-        'editorHoverWidget.background': '#1E222A',
+        'editor.background': '#0B1120',
+        'editor.foreground': '#E2E8F0',
+        'editorLineNumber.foreground': '#475569',
+        'editorLineNumber.activeForeground': '#38BDF8',
+        'editor.selectionBackground': '#334155',
+        'editor.inactiveSelectionBackground': '#1E293B',
+        'editor.lineHighlightBackground': '#1E293B',
+        'editor.lineHighlightBorder': '#334155',
+        'editorCursor.foreground': '#38BDF8',
+        'editorIndentGuide.background': '#1E293B',
+        'editorIndentGuide.activeBackground': '#334155',
+        'editorBracketMatch.background': '#334155',
+        'editorBracketMatch.border': '#38BDF8',
       }
     });
 
-    // কার্সর পজিশন এবং সিলেকশন ট্র্যাকিং
     editor.onDidChangeCursorPosition((e) => setCursorPos({ line: e.position.lineNumber, col: e.position.column }));
     editor.onDidChangeCursorSelection((e) => {
       const model = editor.getModel();
@@ -898,7 +891,7 @@ function App() {
             </button>
             <div className="logo-brand">
               <FiCode size={20} className="logo-icon" />
-              <h1>Tech System</h1>
+              <h1>CodeX</h1>
             </div>
             {!online && <FiWifiOff size={14} style={{ color: '#ef4444' }} title="Offline" />}
           </div>
@@ -1145,7 +1138,7 @@ function App() {
               <div className="empty-state-logo">
                 <FiCode size={64} className="empty-icon" />
               </div>
-              <h2 className="empty-title">Tech System</h2>
+              <h2 className="empty-title">CodeX</h2>
               <p className="empty-subtitle">Premium Code Editor</p>
               <button onClick={handleCreateNewFile}>
                 <FiPlus size={16} /> Create New File
@@ -1345,7 +1338,7 @@ function App() {
               <div className="setting-item">
                 <label>Editor Theme</label>
                 <select value={theme} onChange={(e) => setTheme(e.target.value)}>
-                  <option value="tech-dark">Tech Dark (Premium)</option>
+                  <option value="tech-dark">CodeX Dark (Premium)</option>
                   <option value="vs-dark">VS Dark (Default)</option>
                   <option value="vs-light">Light</option>
                   <option value="hc-black">High Contrast</option>
@@ -1375,7 +1368,7 @@ function App() {
         <div className="install-banner">
           <div className="install-icon"><FiDownloadCloud size={24} /></div>
           <div className="install-text">
-            <h4>Install Tech System</h4>
+            <h4>Install CodeX</h4>
             <p>Add to home screen for app-like experience</p>
           </div>
           <button className="install-btn" onClick={handleInstallClick}>Install</button>
