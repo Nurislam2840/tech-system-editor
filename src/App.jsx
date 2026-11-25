@@ -20,7 +20,9 @@ import {
 } from 'react-icons/fi';
 import './App.css';
 
-// ---------- Constants ----------
+// ==========================================
+// কনস্ট্যান্ট এবং হেল্পার ফাংশন
+// ==========================================
 const FONT_MIN = 12;
 const FONT_MAX = 24;
 const DEFAULT_FONT = 14;
@@ -78,6 +80,9 @@ const escapeHTML = (str) => {
 };
 
 function App() {
+  // ==========================================
+  // ১. স্টেট ডিক্লারেশন (States)
+  // ==========================================
   const [theme, setTheme] = useState('tech-dark');
   const [fontSize, setFontSize] = useState(DEFAULT_FONT);
   const [sidebarOpen, setSidebarOpen] = useState(false);
@@ -118,6 +123,13 @@ function App() {
     fileId: null, selectionText: ''
   });
 
+  // PWA Install Prompt States
+  const [deferredPrompt, setDeferredPrompt] = useState(null);
+  const [showInstallBanner, setShowInstallBanner] = useState(false);
+
+  // ==========================================
+  // ২. রেফারেন্স (Refs)
+  // ==========================================
   const fileInputRef = useRef(null);
   const editorRef = useRef(null);
   const monacoRef = useRef(null);
@@ -125,15 +137,23 @@ function App() {
   const searchTimerRef = useRef(null);
   const savedIndicatorTimerRef = useRef(null);
 
+  // ==========================================
+  // ৩. হেল্পার ফাংশন (Helper Functions)
+  // ==========================================
   const showCustomAlert = useCallback((type, title, message, isPrompt = false, onConfirm = null, defaultValue = '') => {
     setAlertConfig({ visible: true, type, title, message, isPrompt, inputValue: defaultValue, onConfirm });
   }, []);
+  
   const closeAlert = useCallback(() => setAlertConfig(prev => ({ ...prev, visible: false })), []);
 
   const activeFile = files.find(f => f.id === activeFileId);
   const filteredFiles = files.filter(f => f.name.toLowerCase().includes(searchQuery.toLowerCase()));
 
-  // Load settings
+  // ==========================================
+  // ৪. ইউজ ইফেক্ট (useEffect Hooks)
+  // ==========================================
+  
+  // সেটিংস লোড করা
   useEffect(() => {
     const loadSettings = async () => {
       const savedTheme = await localforage.getItem('techSystemTheme');
@@ -146,11 +166,12 @@ function App() {
     loadSettings();
   }, []);
 
+  // সেটিংস সেভ করা
   useEffect(() => { localforage.setItem('techSystemTheme', theme); }, [theme]);
   useEffect(() => { localforage.setItem('techSystemFontSize', fontSize); }, [fontSize]);
   useEffect(() => { localforage.setItem('techSystemRecentCmds', recentCommands); }, [recentCommands]);
 
-  // Online status
+  // অনলাইন/অফলাইন স্ট্যাটাস
   useEffect(() => {
     const on = () => setOnline(true);
     const off = () => setOnline(false);
@@ -159,7 +180,18 @@ function App() {
     return () => { window.removeEventListener('online', on); window.removeEventListener('offline', off); };
   }, []);
 
-  // Load files
+  // PWA ইন্সটল প্রম্পট হ্যান্ডলিং
+  useEffect(() => {
+    const handleBeforeInstallPrompt = (e) => {
+      e.preventDefault();
+      setDeferredPrompt(e);
+      setTimeout(() => setShowInstallBanner(true), 5000); // ৫ সেকেন্ড পর দেখাবে
+    };
+    window.addEventListener('beforeinstallprompt', handleBeforeInstallPrompt);
+    return () => window.removeEventListener('beforeinstallprompt', handleBeforeInstallPrompt);
+  }, []);
+
+  // ফাইল লোড করা (URL বা লোকাল স্টোরেজ থেকে)
   useEffect(() => {
     const load = async () => {
       const hash = window.location.hash;
@@ -187,9 +219,7 @@ function App() {
         const defaults = [
           { id: '1', name: 'index.html', language: 'html', content: '<!DOCTYPE html>\n<html>\n<head>\n  <title>My App</title>\n</head>\n<body>\n  <h1 style="color: #38bdf8;">Hello Tech System!</h1>\n  <button onclick="testLog()">Click Me</button>\n</body>\n</html>' },
           { id: '2', name: 'style.css', language: 'css', content: 'body {\n    background: #0f172a;\n    color: white;\n    font-family: "Outfit", sans-serif;\n    padding: 20px;\n}' },
-          { id: '3', name: 'app.js', language: 'javascript', content: 'console.log("App Running...");\n\nfunction testLog() {\n    console.log("Button clicked at: " + new Date().toLocaleTimeString());\n}' },
-          { id: '4', name: 'main.py', language: 'python', content: '# Python Example\ndef greet(name):\n    print(f"Hello, {name}!")\n\ngreet("Developer")' },
-          { id: '5', name: 'data.xml', language: 'xml', content: '<?xml version="1.0" encoding="UTF-8"?>\n<note>\n  <to>Tove</to>\n  <from>Jani</from>\n  <heading>Reminder</heading>\n  <body>Don\'t forget me this weekend!</body>\n</note>' }
+          { id: '3', name: 'app.js', language: 'javascript', content: 'console.log("App Running...");\n\nfunction testLog() {\n    console.log("Button clicked at: " + new Date().toLocaleTimeString());\n}' }
         ];
         setFiles(defaults);
         setActiveFileId('1');
@@ -201,7 +231,7 @@ function App() {
     load();
   }, [showCustomAlert]);
 
-  // Auto-save
+  // অটো সেভ (Localforage)
   useEffect(() => {
     if (files.length === 0) return;
     if (saveTimerRef.current) clearTimeout(saveTimerRef.current);
@@ -216,12 +246,13 @@ function App() {
     return () => { if (saveTimerRef.current) clearTimeout(saveTimerRef.current); };
   }, [files]);
 
+  // আনসেভড ডট ইন্ডিকেটর
   useEffect(() => {
     if (!activeFile) { setShowUnsavedDot(false); return; }
     setShowUnsavedDot(savedFilesMap[activeFile.id] !== activeFile.content);
   }, [files, activeFile, savedFilesMap]);
 
-  // Content search
+  // কন্টেন্ট সার্চ (ফাইলের ভেতরে)
   useEffect(() => {
     if (searchMode !== 'content' || !searchQuery.trim()) {
       setSearchResults([]);
@@ -242,6 +273,40 @@ function App() {
     }, 250);
   }, [searchQuery, searchMode, files]);
 
+  // গ্লোবাল কী-বোর্ড শর্টকাট
+  useEffect(() => {
+    const handler = (e) => {
+      const mod = e.ctrlKey || e.metaKey;
+      if (mod && e.key === 's') { e.preventDefault(); handleSaveToPhone(); }
+      else if (mod && e.key === 'Enter') { e.preventDefault(); setShowPreview(p => !p); setConsoleLogs([]); }
+      else if (mod && e.shiftKey && (e.key === 'P' || e.key === 'p')) { e.preventDefault(); setShowCommandPalette(p => !p); }
+      else if (mod && e.shiftKey && (e.key === 'F' || e.key === 'f')) { e.preventDefault(); handleFormat(); }
+      else if (mod && e.shiftKey && (e.key === 'N' || e.key === 'n')) { e.preventDefault(); handleCreateNewFile(); }
+      else if (mod && e.key === '/') { e.preventDefault(); setShowShortcuts(s => !s); }
+      else if (e.key === 'Escape') {
+        setShowShortcuts(false);
+        setShowCommandPalette(false);
+        setContextMenu(c => ({ ...c, visible: false }));
+      }
+    };
+    window.addEventListener('keydown', handler);
+    return () => window.removeEventListener('keydown', handler);
+  }, [handleSaveToPhone, handleFormat, handleCreateNewFile]);
+
+  // ==========================================
+  // ৫. হ্যান্ডলার ফাংশন (Handlers)
+  // ==========================================
+  
+  const handleInstallClick = async () => {
+    if (!deferredPrompt) return;
+    deferredPrompt.prompt();
+    const { outcome } = await deferredPrompt.userChoice;
+    if (outcome === 'accepted') {
+      setShowInstallBanner(false);
+    }
+    setDeferredPrompt(null);
+  };
+
   const handleCodeChange = useCallback((newCode) => {
     setFiles(prev => prev.map(f => f.id === activeFileId ? { ...f, content: newCode ?? '' } : f));
   }, [activeFileId]);
@@ -252,67 +317,57 @@ function App() {
     savedIndicatorTimerRef.current = setTimeout(() => setJustSaved(false), 1500);
   };
 
+  // ফাইল ফোনে সেভ করা (Base64 পদ্ধতি, .json সমস্যা ফিক্স)
   const handleSaveToPhone = useCallback(async () => {
-  if (!activeFile) return;
-  
-  const fileName = activeFile.name;
-  const ext = fileName.split('.').pop().toLowerCase();
-  
-  // সঠিক MIME টাইপ নির্ধারণ (এটি .json সমস্যা দূর করবে)
-  let mimeType = 'text/plain';
-  if (ext === 'html' || ext === 'htm') mimeType = 'text/html';
-  else if (ext === 'css') mimeType = 'text/css';
-  else if (ext === 'js' || ext === 'jsx') mimeType = 'application/javascript';
-  else if (ext === 'json') mimeType = 'application/json';
-  else if (ext === 'xml') mimeType = 'application/xml';
-  else if (ext === 'py') mimeType = 'text/x-python';
-  else if (ext === 'md') mimeType = 'text/markdown';
-  
-  try {
-  // ডেস্কটপের জন্য File System Access API
-  if ('showSaveFilePicker' in window && window.isSecureContext) {
-  try {
-  const fileHandle = await window.showSaveFilePicker({
-  suggestedName: fileName,
-  types: [{
-  description: 'Code Files',
-  accept: { [mimeType]: ['.' + ext] },
-  }],
-  });
-  const writable = await fileHandle.createWritable();
-  await writable.write(activeFile.content);
-  await writable.close();
-  showCustomAlert('success', 'Saved!', 'File saved to your phone.');
-  flashSaved();
-  return;
-  } catch (err) {
-  if (err.name === 'AbortError') return; // ইউজার ক্যানসেল করলে
-  }
-  }
-  
-  // মোবাইল ব্রাউজারের জন্য Base64 Data URI পদ্ধতি
-  // btoa() ব্যবহার করা হচ্ছে যাতে অ্যান্ড্রয়েড ব্রাউজার একে সঠিক ফাইল হিসেবে চিনে
-  const base64Content = btoa(unescape(encodeURIComponent(activeFile.content)));
-  const dataUri = `data:${mimeType};base64,${base64Content}`;
-  
-  const a = document.createElement('a');
-  a.href = dataUri;
-  a.download = fileName; // এখানে সঠিক ফাইল নাম পাস হচ্ছে
-  a.style.display = 'none';
-  document.body.appendChild(a);
-  a.click();
-  
-  setTimeout(() => {
-  document.body.removeChild(a);
-  }, 100);
-  
-  showCustomAlert('success', 'Downloaded!', `${fileName} saved successfully.`);
-  flashSaved();
-  
-  } catch (error) {
-  console.error('Save error:', error);
-  showCustomAlert('danger', 'Save Failed', 'Could not save file.');
-  }
+    if (!activeFile) return;
+    
+    const fileName = activeFile.name;
+    const ext = fileName.split('.').pop().toLowerCase();
+
+    let mimeType = 'text/plain';
+    if (ext === 'html' || ext === 'htm') mimeType = 'text/html';
+    else if (ext === 'css') mimeType = 'text/css';
+    else if (ext === 'js' || ext === 'jsx') mimeType = 'application/javascript';
+    else if (ext === 'json') mimeType = 'application/json';
+    else if (ext === 'xml') mimeType = 'application/xml';
+
+    try {
+      if ('showSaveFilePicker' in window && window.isSecureContext) {
+        try {
+          const fileHandle = await window.showSaveFilePicker({
+            suggestedName: fileName,
+            types: [{ description: 'Code Files', accept: { [mimeType]: ['.' + ext] } }],
+          });
+          const writable = await fileHandle.createWritable();
+          await writable.write(activeFile.content);
+          await writable.close();
+          showCustomAlert('success', 'Saved!', 'File saved to your phone.');
+          flashSaved();
+          return;
+        } catch (err) {
+          if (err.name === 'AbortError') return;
+        }
+      }
+
+      // মোবাইলের জন্য Base64 Data URI
+      const base64Content = btoa(unescape(encodeURIComponent(activeFile.content)));
+      const dataUri = `data:${mimeType};base64,${base64Content}`;
+      
+      const a = document.createElement('a');
+      a.href = dataUri;
+      a.download = fileName;
+      a.style.display = 'none';
+      document.body.appendChild(a);
+      a.click();
+      
+      setTimeout(() => { document.body.removeChild(a); }, 100);
+
+      showCustomAlert('success', 'Downloaded!', `${fileName} saved successfully.`);
+      flashSaved();
+
+    } catch (error) {
+      showCustomAlert('danger', 'Save Failed', 'Could not save file.');
+    }
   }, [activeFile, showCustomAlert]);
 
   const handleExportZip = async () => {
@@ -355,9 +410,7 @@ function App() {
       const url = `${window.location.origin}${window.location.pathname}#code=${compressed}`;
       navigator.clipboard.writeText(url).then(() => {
         showCustomAlert('success', 'Link Copied!', 'Share this URL to load the code.');
-      }).catch(() => {
-        showCustomAlert('info', 'Share URL', url);
-      });
+      }).catch(() => { showCustomAlert('info', 'Share URL', url); });
     } catch {
       showCustomAlert('danger', 'Share Failed', 'Could not generate share link.');
     }
@@ -378,9 +431,7 @@ function App() {
         showCustomAlert('info', 'Formatting', 'Auto-formatting is best supported for HTML, CSS, JS, JSON.');
         return;
       }
-      const formatted = await prettier.format(activeFile.content, {
-        parser, plugins, tabWidth: 4, singleQuote: true, semi: true,
-      });
+      const formatted = await prettier.format(activeFile.content, { parser, plugins, tabWidth: 4, singleQuote: true, semi: true });
       handleCodeChange(formatted);
       showCustomAlert('success', 'Formatted!', `${activeFile.name} formatted successfully.`);
     } catch (err) {
@@ -389,7 +440,7 @@ function App() {
   }, [activeFile, handleCodeChange, showCustomAlert]);
 
   const handleCreateNewFile = useCallback(() => {
-    showCustomAlert('info', 'New File', 'Enter file name (e.g. script.py, app.java):', true, (fileName) => {
+    showCustomAlert('info', 'New File', 'Enter file name (e.g. script.py):', true, (fileName) => {
       if (!fileName) return;
       const newFile = { id: Date.now().toString(), name: fileName, language: getLanguage(fileName), content: '' };
       setFiles(prev => [...prev, newFile]);
@@ -440,25 +491,23 @@ function App() {
   const handleImportFromClipboard = async () => {
     try {
       const text = await navigator.clipboard.readText();
-      if (!text) { showCustomAlert('info', 'Clipboard Empty', 'No text found in clipboard.'); return; }
+      if (!text) { showCustomAlert('info', 'Clipboard Empty', 'No text found.'); return; }
       const newFile = { id: Date.now().toString(), name: `clipboard-${Date.now()}.txt`, language: 'plaintext', content: text };
       setFiles(prev => [...prev, newFile]);
       setActiveFileId(newFile.id);
       setSidebarOpen(false);
-      showCustomAlert('success', 'Imported!', 'Clipboard content added as new file.');
+      showCustomAlert('success', 'Imported!', 'Clipboard content added.');
     } catch {
       showCustomAlert('danger', 'Import Failed', 'Allow clipboard access.');
     }
   };
 
-  // Copy/Paste
+  // কপি/পেস্ট হ্যান্ডলার
   const handleCut = async () => {
     if (contextMenu.selectionText) {
       try {
         await navigator.clipboard.writeText(contextMenu.selectionText);
-        if (editorRef.current) {
-          editorRef.current.executeEdits('', [{ range: editorRef.current.getSelection(), text: '' }]);
-        }
+        if (editorRef.current) editorRef.current.executeEdits('', [{ range: editorRef.current.getSelection(), text: '' }]);
       } catch { showCustomAlert('danger', 'Cut failed', 'Clipboard denied.'); }
     }
     setContextMenu(c => ({ ...c, visible: false }));
@@ -468,7 +517,7 @@ function App() {
     if (contextMenu.selectionText) {
       try {
         await navigator.clipboard.writeText(contextMenu.selectionText);
-        showCustomAlert('success', 'Copied!', 'Text copied to clipboard.');
+        showCustomAlert('success', 'Copied!', 'Text copied.');
       } catch { showCustomAlert('danger', 'Copy failed', 'Clipboard denied.'); }
     }
     setContextMenu(c => ({ ...c, visible: false }));
@@ -477,9 +526,7 @@ function App() {
   const handlePaste = async () => {
     try {
       const text = await navigator.clipboard.readText();
-      if (editorRef.current) {
-        editorRef.current.executeEdits('', [{ range: editorRef.current.getSelection(), text }]);
-      }
+      if (editorRef.current) editorRef.current.executeEdits('', [{ range: editorRef.current.getSelection(), text }]);
     } catch { showCustomAlert('danger', 'Paste Failed', 'Allow clipboard access.'); }
     setContextMenu(c => ({ ...c, visible: false }));
   };
@@ -494,7 +541,7 @@ function App() {
     setContextMenu(c => ({ ...c, visible: false }));
   };
 
-  // Mobile keyboard
+  // মোবাইল কিবোর্ড হেল্পার
   const keepFocus = () => { if (editorRef.current) editorRef.current.focus(); };
   const safeRange = (sl, sc, el, ec) => {
     if (monacoRef.current?.Range) return new monacoRef.current.Range(sl, sc, el, ec);
@@ -565,53 +612,49 @@ function App() {
     keepFocus();
   };
 
+  // ==========================================
+  // ৬. এডিটর মাউন্ট এবং থিম সেটআপ (Monaco Editor)
+  // ==========================================
   const handleEditorDidMount = (editor, monaco) => {
     editorRef.current = editor;
     monacoRef.current = monaco;
 
-    // নতুন প্রিমিয়াম কালার থিম (ল্যাঙ্গুয়েজ অনুযায়ী আলাদা ৪-৫টি কালার)
+    // নতুন প্রিমিয়াম কালার থিম
     monaco.editor.defineTheme('tech-dark', {
       base: 'vs-dark',
       inherit: true,
       rules: [
-        // ---------- সাধারণ (Common) ----------
         { token: '', foreground: 'D4D4D4' },
         { token: 'identifier', foreground: 'D4D4D4' },
         { token: 'delimiter', foreground: 'A6ACCD' },
-        { token: 'comment', foreground: '7A8B7A', fontStyle: 'italic' }, // কমেন্ট (সব জায়গায়)
+        { token: 'comment', foreground: '7A8B7A', fontStyle: 'italic' },
 
-        // ==========================================
-        // ১. HTML কালার (লাল, হলুদ, সবুজ, সায়ান)
-        // ==========================================
-        { token: 'tag', foreground: 'F07178' }, // ট্যাগ: লাল/পিংক (যেমন: <div>, <body>)
+        // HTML
+        { token: 'tag', foreground: 'F07178' },
         { token: 'metatag', foreground: 'F07178' },
-        { token: 'attribute.name', foreground: 'FFCB6B' }, // অ্যাট্রিবিউট: হলুদ (যেমন: class, id)
-        { token: 'attribute.value', foreground: 'C3E88D' }, // ভ্যালু: সফট গ্রিন (যেমন: "container")
-        { token: 'delimiter.html', foreground: '89DDFF' }, // ব্র্যাকেট: সায়ান (যেমন: < > /)
+        { token: 'attribute.name', foreground: 'FFCB6B' },
+        { token: 'attribute.value', foreground: 'C3E88D' },
+        { token: 'delimiter.html', foreground: '89DDFF' },
 
-        // ==========================================
-        // ২. CSS কালার (পিংক, সবুজ, কমলা, সায়ান)
-        // ==========================================
-        { token: 'attribute.name.css', foreground: 'F07178' }, // প্রপার্টি: লাল/পিংক (যেমন: margin, color)
-        { token: 'attribute.value.css', foreground: 'C3E88D' }, // ভ্যালু: সফট গ্রিন (যেমন: solid, sans-serif)
-        { token: 'attribute.value.number.css', foreground: 'F78C6C' }, // নাম্বার: কমলা (যেমন: 10, 100)
-        { token: 'attribute.value.unit.css', foreground: 'F78C6C' }, // ইউনিট: কমলা (যেমন: px, em, %)
-        { token: 'attribute.value.hex.css', foreground: '89DDFF' }, // হেক্স কালার: সায়ান (যেমন: #ffffff)
-        { token: 'tag.css', foreground: 'C792EA' }, // ক্লাস/আইডি: পার্পল (যেমন: .container, #root)
+        // CSS
+        { token: 'attribute.name.css', foreground: 'F07178' },
+        { token: 'attribute.value.css', foreground: 'C3E88D' },
+        { token: 'attribute.value.number.css', foreground: 'F78C6C' },
+        { token: 'attribute.value.unit.css', foreground: 'F78C6C' },
+        { token: 'attribute.value.hex.css', foreground: '89DDFF' },
+        { token: 'tag.css', foreground: 'C792EA' },
 
-        // ==========================================
-        // ৩. JavaScript কালার (পার্পল, নীল, সবুজ, কমলা)
-        // ==========================================
-        { token: 'keyword', foreground: 'C792EA' }, // কিওয়ার্ড: পার্পল (যেমন: const, let, if, return)
+        // JS
+        { token: 'keyword', foreground: 'C792EA' },
         { token: 'keyword.control', foreground: 'C792EA' },
-        { token: 'function', foreground: '82AAFF' }, // ফাংশন: নীল (যেমন: console.log, myFunc)
-        { token: 'variable', foreground: '89DDFF' }, // ভেরিয়েবল: সায়ান (যেমন: myVar)
+        { token: 'function', foreground: '82AAFF' },
+        { token: 'variable', foreground: '89DDFF' },
         { token: 'variable.predefined', foreground: '89DDFF' },
-        { token: 'string', foreground: 'C3E88D' }, // স্ট্রিং: সফট গ্রিন (যেমন: "hello")
-        { token: 'number', foreground: 'F78C6C' }, // নাম্বার: কমলা (যেমন: 123)
-        { token: 'type', foreground: 'FFCB6B' }, // টাইপ: হলুদ (যেমন: Array, Object)
+        { token: 'string', foreground: 'C3E88D' },
+        { token: 'number', foreground: 'F78C6C' },
+        { token: 'type', foreground: 'FFCB6B' },
         { token: 'class', foreground: 'FFCB6B' },
-        { token: 'operator', foreground: '89DDFF' }, // অপারেটর: সায়ান (যেমন: +, -, =)
+        { token: 'operator', foreground: '89DDFF' },
       ],
       colors: {
         'editor.background': '#0d1117',
@@ -634,26 +677,19 @@ function App() {
       }
     });
 
-    editor.onDidChangeCursorPosition((e) => {
-      setCursorPos({ line: e.position.lineNumber, col: e.position.column });
-    });
-
+    // কার্সর পজিশন এবং সিলেকশন ট্র্যাকিং
+    editor.onDidChangeCursorPosition((e) => setCursorPos({ line: e.position.lineNumber, col: e.position.column }));
     editor.onDidChangeCursorSelection((e) => {
       const model = editor.getModel();
       if (!model) return;
       const sel = e.selection;
-      if (sel && !sel.isEmpty()) {
-        const text = model.getValueInRange(sel);
-        setSelectionInfo({ count: text.length });
-      } else {
-        setSelectionInfo({ count: 0 });
-      }
+      if (sel && !sel.isEmpty()) setSelectionInfo({ count: model.getValueInRange(sel).length });
+      else setSelectionInfo({ count: 0 });
     });
 
-    // কাস্টম কনটেক্সট মেনু ওপেন করার ফাংশন
+    // কাস্টম কনটেক্সট মেনু লজিক
     const openContextMenu = (e, forceSelection = false) => {
       if (e && e.event) e.event.preventDefault();
-      
       const selection = editor.getSelection();
       const model = editor.getModel();
       const hasSelection = forceSelection || (selection && !selection.isEmpty());
@@ -669,10 +705,7 @@ function App() {
         const position = editor.getPosition();
         if (position) {
           const coords = editor.getScrolledVisiblePosition(position);
-          if (coords) {
-            x = coords.left;
-            y = coords.top + 30;
-          }
+          if (coords) { x = coords.left; y = coords.top + 30; }
         }
       }
 
@@ -680,38 +713,23 @@ function App() {
         visible: true,
         x: Math.max(10, Math.min(x, window.innerWidth - 200)),
         y: Math.max(10, Math.min(y, window.innerHeight - 260)),
-        hasSelection: hasSelection,
-        fileId: null,
-        selectionText: selectedText
+        hasSelection, fileId: null, selectionText: selectedText
       });
     };
 
-    // Desktop Right Click
     editor.onContextMenu((e) => openContextMenu(e, false));
 
-    // Mobile Long Press logic (সিলেক্ট করার পর মেনু আসবে)
     let touchTimer;
     editor.onMouseDown((e) => {
       setContextMenu(c => ({ ...c, visible: false }));
       if (e.event.browserEvent && e.event.browserEvent.pointerType === 'touch') {
         touchTimer = setTimeout(() => {
-          const selection = editor.getSelection();
-          const hasSelection = selection && !selection.isEmpty();
-          // যদি কিছু সিলেক্ট করা থাকে, তবেই মেনু ওপেন হবে
-          if (hasSelection) {
-            openContextMenu(null, true);
-          }
+          if (editor.getSelection() && !editor.getSelection().isEmpty()) openContextMenu(null, true);
         }, 600);
       }
     });
-
-    editor.onMouseUp(() => {
-      if (touchTimer) clearTimeout(touchTimer);
-    });
-    
-    editor.onMouseMove(() => {
-      if (touchTimer) clearTimeout(touchTimer);
-    });
+    editor.onMouseUp(() => { if (touchTimer) clearTimeout(touchTimer); });
+    editor.onMouseMove(() => { if (touchTimer) clearTimeout(touchTimer); });
 
     if (window.visualViewport) {
       window.visualViewport.addEventListener('resize', () => {
@@ -722,6 +740,9 @@ function App() {
     }
   };
 
+  // ==========================================
+  // ৭. প্রিভিউ কন্টেন্ট জেনারেটর
+  // ==========================================
   const getPreviewContent = useCallback(() => {
     if (activeFile?.language === 'xml' || activeFile?.name.endsWith('.xml')) {
       return `<!DOCTYPE html>
@@ -789,30 +810,11 @@ function App() {
     return () => window.removeEventListener('message', handleMessage);
   }, []);
 
-  // Keyboard shortcuts
-  useEffect(() => {
-    const handler = (e) => {
-      const mod = e.ctrlKey || e.metaKey;
-      if (mod && e.key === 's') { e.preventDefault(); handleSaveToPhone(); }
-      else if (mod && e.key === 'Enter') { e.preventDefault(); setShowPreview(p => !p); setConsoleLogs([]); }
-      else if (mod && e.shiftKey && (e.key === 'P' || e.key === 'p')) { e.preventDefault(); setShowCommandPalette(p => !p); }
-      else if (mod && e.shiftKey && (e.key === 'F' || e.key === 'f')) { e.preventDefault(); handleFormat(); }
-      else if (mod && e.shiftKey && (e.key === 'N' || e.key === 'n')) { e.preventDefault(); handleCreateNewFile(); }
-      else if (mod && e.key === '/') { e.preventDefault(); setShowShortcuts(s => !s); }
-      else if (e.key === 'Escape') {
-        setShowShortcuts(false);
-        setShowCommandPalette(false);
-        setContextMenu(c => ({ ...c, visible: false }));
-      }
-    };
-    window.addEventListener('keydown', handler);
-    return () => window.removeEventListener('keydown', handler);
-  }, [handleSaveToPhone, handleFormat, handleCreateNewFile]);
-
+  // ==========================================
+  // ৮. কমান্ড প্যালেট ও অন্যান্য সেটআপ
+  // ==========================================
   const handleZenToggle = () => setZenMode(z => !z);
-
   const handlePreviewDevice = (device) => setPreviewDevice(device);
-
   const previewWidth = previewDevice === 'mobile' ? '375px' : previewDevice === 'tablet' ? '768px' : '100%';
 
   const commands = useMemo(() => [
@@ -840,9 +842,7 @@ function App() {
     const q = commandQuery.toLowerCase();
     const matched = commands.filter(c => c.label.toLowerCase().includes(q));
     if (!q) {
-      const recent = recentCommands
-        .map(id => commands.find(c => c.id === id))
-        .filter(Boolean);
+      const recent = recentCommands.map(id => commands.find(c => c.id === id)).filter(Boolean);
       const others = matched.filter(c => !recent.find(r => r.id === c.id));
       return [...recent, ...others];
     }
@@ -852,10 +852,7 @@ function App() {
   const runCommand = (cmd) => {
     setShowCommandPalette(false);
     setCommandQuery('');
-    setRecentCommands(prev => {
-      const filtered = prev.filter(id => id !== cmd.id);
-      return [cmd.id, ...filtered].slice(0, 5);
-    });
+    setRecentCommands(prev => [cmd.id, ...prev.filter(id => id !== cmd.id)].slice(0, 5));
     cmd.action();
   };
 
@@ -870,7 +867,6 @@ function App() {
 
   const filteredLogs = consoleLogs.filter(l => logFilter === 'all' || l.level === logFilter);
 
-  // Drag & drop file reorder
   const handleDragStart = (id) => setDraggedFileId(id);
   const handleDragOver = (e) => e.preventDefault();
   const handleDrop = (targetId) => {
@@ -887,8 +883,13 @@ function App() {
     setDraggedFileId(null);
   };
 
+  // ==========================================
+  // ৯. রেন্ডারিং (UI Rendering) - শুরু
+  // ==========================================
   return (
     <div className={`app-container ${theme === 'vs-light' ? 'light-mode' : ''} ${zenMode ? 'zen-mode' : ''}`}>
+      
+      {/* হেডার সেকশন শুরু */}
       {!zenMode && (
         <header className="top-bar">
           <div className="logo">
@@ -902,7 +903,7 @@ function App() {
             {!online && <FiWifiOff size={14} style={{ color: '#ef4444' }} title="Offline" />}
           </div>
           <div className="actions">
-            <button className="icon-btn bg-transparent" onClick={() => setShowCommandPalette(true)} title="Command Palette (Ctrl+Shift+P)">
+            <button className="icon-btn bg-transparent" onClick={() => setShowCommandPalette(true)} title="Command Palette">
               <FiCommand size={18} />
             </button>
             <button className="icon-btn bg-transparent" onClick={() => setTheme(theme === 'tech-dark' ? 'vs-light' : 'tech-dark')} title="Theme">
@@ -911,10 +912,10 @@ function App() {
             <button className="icon-btn bg-transparent" onClick={() => setShowSettings(true)} title="Settings">
               <FiSettings size={18} />
             </button>
-            <button className="icon-btn bg-transparent" onClick={handleZenToggle} title="Zen Mode (Ctrl+/)">
+            <button className="icon-btn bg-transparent" onClick={handleZenToggle} title="Zen Mode">
               <FiMaximize2 size={18} />
             </button>
-            <button className="icon-btn bg-transparent" onClick={() => { setShowPreview(!showPreview); setConsoleLogs([]); }} title="Preview (Ctrl+Enter)">
+            <button className="icon-btn bg-transparent" onClick={() => { setShowPreview(!showPreview); setConsoleLogs([]); }} title="Preview">
               <FiPlay size={18} />
             </button>
             <button className={`icon-btn ${justSaved ? 'saved' : ''}`} onClick={handleSaveToPhone} title="Save">
@@ -923,6 +924,7 @@ function App() {
           </div>
         </header>
       )}
+      {/* হেডার সেকশন শেষ */}
 
       {zenMode && (
         <div className="zen-exit">
@@ -931,6 +933,8 @@ function App() {
       )}
 
       <main className="main-content">
+        
+        {/* সাইডবার সেকশন শুরু */}
         {!zenMode && (
           <aside className={`sidebar ${sidebarOpen ? 'open' : ''}`}>
             <div className="sidebar-header">
@@ -1049,9 +1053,11 @@ function App() {
             </ul>
           </aside>
         )}
+        {/* সাইডবার সেকশন শেষ */}
 
         {sidebarOpen && !zenMode && <div className="overlay" onClick={() => setSidebarOpen(false)}></div>}
 
+        {/* এডিটর সেকশন শুরু */}
         <section className="editor-section">
           {activeFile ? (
             <>
@@ -1064,7 +1070,7 @@ function App() {
                     <button onClick={() => editorRef.current?.trigger('keyboard', 'undo')} title="Undo"><FiChevronsLeft size={14} /></button>
                     <button onClick={() => editorRef.current?.trigger('keyboard', 'redo')} title="Redo"><FiChevronsRight size={14} /></button>
                     <button onClick={() => editorRef.current?.getAction('actions.find')?.run()} title="Find"><FiSearch size={14} /></button>
-                    <button onClick={handleFormat} title="Format (Ctrl+Shift+F)"><FiAlignLeft size={14} /></button>
+                    <button onClick={handleFormat} title="Format"><FiAlignLeft size={14} /></button>
                     <button onClick={handleZenToggle} title="Zen Mode"><FiMaximize2 size={14} /></button>
                   </span>
                 </div>
@@ -1108,6 +1114,7 @@ function App() {
 
               {!zenMode && (
                 <>
+                  {/* মোবাইল কিবোর্ড টুলবার */}
                   <div className="mobile-keyboard-toolbar">
                     <div className="toolbar-group">
                       <button onMouseDown={e => e.preventDefault()} onTouchStart={e => e.preventDefault()}
@@ -1123,6 +1130,7 @@ function App() {
                     </div>
                   </div>
 
+                  {/* স্নিপেট বার */}
                   <div className="snippet-bar">
                     {['()', '{}', '[]', '""', "''", ';', '=>', '${}', '/* */', '//', '<>', '</>'].map(s => (
                       <button key={s} onMouseDown={e => e.preventDefault()} onTouchStart={e => e.preventDefault()}
@@ -1145,7 +1153,9 @@ function App() {
             </div>
           )}
         </section>
+        {/* এডিটর সেকশন শেষ */}
 
+        {/* প্রিভিউ প্যানেল সেকশন শুরু */}
         {showPreview && (
           <div className="preview-panel">
             <div className="preview-header">
@@ -1201,8 +1211,11 @@ function App() {
             )}
           </div>
         )}
+        {/* প্রিভিউ প্যানেল সেকশন শেষ */}
+
       </main>
 
+      {/* কনটেক্সট মেনু সেকশন শুরু */}
       {contextMenu.visible && (
         <div className="custom-context-menu" style={{ top: contextMenu.y, left: contextMenu.x }}>
           {contextMenu.fileId && !contextMenu.hasSelection && (
@@ -1222,7 +1235,9 @@ function App() {
           <button onClick={handleSelectAll}><FiCode size={14} /> Select All</button>
         </div>
       )}
+      {/* কনটেক্সট মেনু সেকশন শেষ */}
 
+      {/* কমান্ড প্যালেট সেকশন শুরু */}
       {showCommandPalette && (
         <div className="modal-overlay" onClick={() => setShowCommandPalette(false)}>
           <div className="command-palette" onClick={e => e.stopPropagation()}>
@@ -1245,7 +1260,9 @@ function App() {
           </div>
         </div>
       )}
+      {/* কমান্ড প্যালেট সেকশন শেষ */}
 
+      {/* শর্টকাট মোডাল সেকশন শুরু */}
       {showShortcuts && (
         <div className="modal-overlay" onClick={() => setShowShortcuts(false)}>
           <div className="modal-content shortcuts-modal" onClick={e => e.stopPropagation()}>
@@ -1272,7 +1289,9 @@ function App() {
           </div>
         </div>
       )}
+      {/* শর্টকাট মোডাল সেকশন শেষ */}
 
+      {/* AI প্লেসহোল্ডার সেকশন শুরু */}
       {showAiPlaceholder && (
         <div className="modal-overlay" onClick={() => setShowAiPlaceholder(false)}>
           <div className="custom-alert-box" onClick={e => e.stopPropagation()}>
@@ -1285,7 +1304,9 @@ function App() {
           </div>
         </div>
       )}
+      {/* AI প্লেসহোল্ডার সেকশন শেষ */}
 
+      {/* অ্যালার্ট/প্রম্পট সেকশন শুরু */}
       {alertConfig.visible && (
         <div className="modal-overlay">
           <div className="custom-alert-box">
@@ -1310,7 +1331,9 @@ function App() {
           </div>
         </div>
       )}
+      {/* অ্যালার্ট/প্রম্পট সেকশন শেষ */}
 
+      {/* সেটিংস মোডাল সেকশন শুরু */}
       {showSettings && (
         <div className="modal-overlay">
           <div className="modal-content">
@@ -1345,7 +1368,23 @@ function App() {
           </div>
         </div>
       )}
+      {/* সেটিংস মোডাল সেকশন শেষ */}
 
+      {/* PWA ইন্সটল ব্যানার সেকশন শুরু */}
+      {showInstallBanner && (
+        <div className="install-banner">
+          <div className="install-icon"><FiDownloadCloud size={24} /></div>
+          <div className="install-text">
+            <h4>Install Tech System</h4>
+            <p>Add to home screen for app-like experience</p>
+          </div>
+          <button className="install-btn" onClick={handleInstallClick}>Install</button>
+          <button className="close-install" onClick={() => setShowInstallBanner(false)}><FiX size={16} /></button>
+        </div>
+      )}
+      {/* PWA ইন্সটল ব্যানার সেকশন শেষ */}
+
+      {/* স্ট্যাটাস বার সেকশন শুরু */}
       {!zenMode && (
         <footer className="status-bar">
           <div className="status-left">
@@ -1361,8 +1400,13 @@ function App() {
           </div>
         </footer>
       )}
+      {/* স্ট্যাটাস বার সেকশন শেষ */}
+
     </div>
   );
+  // ==========================================
+  // রেন্ডারিং (UI Rendering) - শেষ
+  // ==========================================
 }
 
 export default App;

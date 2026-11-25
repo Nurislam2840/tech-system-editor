@@ -4,9 +4,20 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, interactive-widget=resizes-content" />
     <meta name="theme-color" content="#0f172a" />
+    
+    <!-- PWA Meta Tags for App-Like Feel -->
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+    <meta name="mobile-web-app-capable" content="yes" />
+    
     <meta name="description" content="Premium Web Code Editor - Tech System" />
     <link rel="manifest" href="/manifest.json" />
     <title>Tech System Editor</title>
+    
+    <!-- Prevent white flash on load -->
+    <style>
+      body { background-color: #0f172a; margin: 0; }
+    </style>
   </head>
   <body>
     <div id="root"></div>

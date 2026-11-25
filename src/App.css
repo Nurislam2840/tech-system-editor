@@ -823,3 +823,107 @@ input, select, textarea {
     padding: 4px;
   }
 }
+
+/* ============================================
+   PWA APP-LIKE EXPERIENCE (Install Banner & No Select)
+   ============================================ */
+body {
+  -webkit-touch-callout: none;
+  -webkit-user-select: none;
+  -khtml-user-select: none;
+  -moz-user-select: none;
+  -ms-user-select: none;
+  user-select: none;
+}
+
+/* Monaco Editor-এ সিলেক্ট করা যাবে */
+.monaco-editor, textarea, input {
+  user-select: text !important;
+  -webkit-user-select: text !important;
+}
+
+/* Install Banner */
+.install-banner {
+  position: fixed;
+  bottom: 20px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 90%;
+  max-width: 400px;
+  background: rgba(22, 27, 34, 0.95);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  border-radius: 16px;
+  padding: 16px;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  z-index: 1000;
+  box-shadow: 0 10px 40px rgba(0, 0, 0, 0.5), inset 0 1px 0 rgba(255, 255, 255, 0.1);
+  animation: slideUpBanner 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+}
+
+@keyframes slideUpBanner {
+  from { transform: translate(-50%, 100px); opacity: 0; }
+  to { transform: translate(-50%, 0); opacity: 1; }
+}
+
+.install-icon {
+  width: 40px;
+  height: 40px;
+  background: rgba(56, 189, 248, 0.15);
+  color: #38bdf8;
+  border-radius: 12px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.install-text {
+  flex: 1;
+  text-align: left;
+}
+
+.install-text h4 {
+  color: #fff;
+  font-size: 0.95rem;
+  margin-bottom: 4px;
+}
+
+.install-text p {
+  color: #8b949e;
+  font-size: 0.75rem;
+  margin: 0;
+}
+
+.install-btn {
+  background: #38bdf8;
+  color: #0f172a;
+  border: none;
+  padding: 8px 16px;
+  border-radius: 8px;
+  font-weight: 600;
+  font-size: 0.85rem;
+  cursor: pointer;
+  flex-shrink: 0;
+}
+
+.close-install {
+  background: transparent;
+  border: none;
+  color: #8b949e;
+  cursor: pointer;
+  padding: 4px;
+  margin-left: -8px;
+}
+
+/* Light Mode Banner */
+.light-mode .install-banner {
+  background: rgba(255, 255, 255, 0.95);
+  border-color: rgba(0, 0, 0, 0.1);
+}
+.light-mode .install-text h4 { color: #0f172a; }
+.light-mode .install-text p { color: #64748b; }
+.light-mode .install-btn { background: #0f172a; color: #fff; }
