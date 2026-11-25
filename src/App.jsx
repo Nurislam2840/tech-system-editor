@@ -536,39 +536,79 @@ function App() {
     editorRef.current = editor;
     monacoRef.current = monaco;
 
+    // নতুন প্রিমিয়াম কালার থিম (One Dark Pro স্টাইল)
     monaco.editor.defineTheme('tech-dark', {
       base: 'vs-dark',
       inherit: true,
       rules: [
-        { token: 'comment', foreground: '6A9955', fontStyle: 'italic' },
-        { token: 'keyword', foreground: 'C586C0' },
-        { token: 'string', foreground: 'CE9178' },
-        { token: 'number', foreground: 'B5CEA8' },
-        { token: 'type', foreground: '4EC9B0' },
-        { token: 'class', foreground: '4EC9B0' },
-        { token: 'function', foreground: 'DCDCAA' },
-        { token: 'variable', foreground: '9CDCFE' },
-        { token: 'constant', foreground: '4FC1FF' },
-        { token: 'tag', foreground: '569CD6' },
-        { token: 'attribute.name', foreground: '9CDCFE' },
-        { token: 'attribute.value', foreground: 'CE9178' },
-        { token: 'delimiter.html', foreground: '808080' },
-        { token: 'metatag', foreground: '569CD6' }
+        // কমেন্ট: ধূসর-সবুজ (চোখে আরামদায়ক)
+        { token: 'comment', foreground: '7A8B7A', fontStyle: 'italic' },
+        { token: 'comment.html', foreground: '7A8B7A', fontStyle: 'italic' },
+        { token: 'comment.css', foreground: '7A8B7A', fontStyle: 'italic' },
+        
+        // কিওয়ার্ড: পার্পল/ভায়োলেট (যেমন: const, if, return, import)
+        { token: 'keyword', foreground: 'C792EA' },
+        { token: 'keyword.control', foreground: 'C792EA' },
+        
+        // স্ট্রিং (টেক্সট): সফট গ্রিন (যেমন: "hello", 'world')
+        { token: 'string', foreground: 'C3E88D' },
+        { token: 'string.html', foreground: 'C3E88D' },
+        
+        // নাম্বার: কমলা/গোল্ডেন
+        { token: 'number', foreground: 'F78C6C' },
+        
+        // ফাংশন: লাইট ব্লু/সায়ান (যেমন: console.log, myFunction)
+        { token: 'function', foreground: '82AAFF' },
+        { token: 'identifier', foreground: 'D4D4D4' },
+        
+        // ভেরিয়েবল: হালকা সায়ান
+        { token: 'variable', foreground: '89DDFF' },
+        { token: 'variable.predefined', foreground: '89DDFF' },
+        
+        // টাইপ/ক্লাস: হলুদ/গোল্ডেন
+        { token: 'type', foreground: 'FFCB6B' },
+        { token: 'class', foreground: 'FFCB6B' },
+        
+        // HTML ট্যাগ: পিংক/ম্যাজেন্টা
+        { token: 'tag', foreground: 'F07178' },
+        { token: 'metatag', foreground: 'F07178' },
+        { token: 'delimiter.html', foreground: '89DDFF' },
+        
+        // HTML অ্যাট্রিবিউট: হলুদ এবং সায়ান
+        { token: 'attribute.name', foreground: 'FFCB6B' },
+        { token: 'attribute.value', foreground: 'C3E88D' },
+        
+        // অপারেটর: হালকা সায়ান
+        { token: 'operator', foreground: '89DDFF' },
+        
+        // ব্র্যাকেট/ডেলিমিটার
+        { token: 'delimiter', foreground: 'A6ACCD' },
+        
+        // CSS প্রপার্টি
+        { token: 'attribute.name.css', foreground: 'F07178' },
+        { token: 'attribute.value.css', foreground: 'C3E88D' },
+        { token: 'attribute.value.number.css', foreground: 'F78C6C' },
       ],
       colors: {
         'editor.background': '#0d1117',
-        'editor.foreground': '#c9d1d9',
-        'editorLineNumber.foreground': '#484f58',
-        'editorLineNumber.activeForeground': '#c9d1d9',
-        'editor.selectionBackground': '#264F78',
+        'editor.foreground': '#d4d4d4',
+        'editorLineNumber.foreground': '#4B5263',
+        'editorLineNumber.activeForeground': '#C792EA',
+        'editor.selectionBackground': '#3E4451',
         'editor.inactiveSelectionBackground': '#3a3d41',
-        'editor.lineHighlightBackground': '#161b22',
-        'editor.lineHighlightBorder': '#30363d',
-        'editorCursor.foreground': '#58a6ff',
-        'editorIndentGuide.background': '#21262d',
-        'editorIndentGuide.activeBackground': '#30363d',
-        'editorBracketMatch.background': '#3b4048',
-        'editorBracketMatch.border': '#c9d1d9',
+        'editor.lineHighlightBackground': '#1E222A',
+        'editor.lineHighlightBorder': '#282C34',
+        'editorCursor.foreground': '#528BFF',
+        'editorIndentGuide.background': '#2C313C',
+        'editorIndentGuide.activeBackground': '#4B5263',
+        'editorBracketMatch.background': '#3E4451',
+        'editorBracketMatch.border': '#528BFF',
+        
+        // UI কালার
+        'editorWidget.background': '#1E222A',
+        'editorSuggestWidget.background': '#1E222A',
+        'editorSuggestWidget.selectedBackground': '#2C313C',
+        'editorHoverWidget.background': '#1E222A',
       }
     });
 
