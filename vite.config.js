@@ -5,6 +5,6 @@ export default defineConfig({
   plugins: [react()],
   base: '/',
   build: {
-    minify: false, // আপাতত মিনিফাই বন্ধ রাখুন
+    minify: false, // আপাতত বন্ধ রাখলাম, যাতে এরর লুকিয়ে না থাকে
   },
 })

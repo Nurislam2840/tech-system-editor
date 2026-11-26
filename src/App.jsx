@@ -3,11 +3,6 @@ import Editor from '@monaco-editor/react';
 import localforage from 'localforage';
 import JSZip from 'jszip';
 import LZString from 'lz-string';
-import * as prettier from 'prettier/standalone';
-import * as parserHtml from 'prettier/plugins/html';
-import * as parserCss from 'prettier/plugins/postcss';
-import * as parserBabel from 'prettier/plugins/babel';
-import * as parserEstree from 'prettier/plugins/estree';
 import {
   FiCode, FiSave, FiFolder, FiMenu, FiPlus, FiUpload,
   FiX, FiPlay, FiSettings, FiCheckCircle, FiAlertCircle,
@@ -176,18 +171,32 @@ function App() {
   const handleFormat = useCallback(async () => {
     if (!activeFile) return;
     try {
-      const lang = activeFile.language;
+      // ডাইনামিক ইম্পোর্ট (যাতে বিল্ড টাইমে কোনো ReferenceError না আসে)
+      const prettier = await import('prettier/standalone');
       let parser = 'babel';
-      let plugins = [parserBabel, parserEstree];
-      if (lang === 'html') { parser = 'html'; plugins = [parserHtml]; }
-      else if (lang === 'css') { parser = 'css'; plugins = [parserCss]; }
-      else if (lang === 'json') { parser = 'json'; plugins = [parserBabel, parserEstree]; }
-      else if (lang === 'markdown') { parser = 'markdown'; plugins = [parserBabel, parserEstree]; }
-      else if (lang === 'xml') { showCustomAlert('info', 'Formatting', 'XML auto-formatting is not supported yet.'); return; }
-      else if (!['javascript', 'typescript'].includes(lang)) {
+      let plugins = [await import('prettier/plugins/babel'), await import('prettier/plugins/estree')];
+      
+      const lang = activeFile.language;
+      if (lang === 'html') { 
+        parser = 'html'; 
+        plugins = [await import('prettier/plugins/html')]; 
+      } else if (lang === 'css') { 
+        parser = 'css'; 
+        plugins = [await import('prettier/plugins/postcss')]; 
+      } else if (lang === 'json') { 
+        parser = 'json'; 
+        plugins = [await import('prettier/plugins/babel'), await import('prettier/plugins/estree')]; 
+      } else if (lang === 'markdown') { 
+        parser = 'markdown'; 
+        plugins = [await import('prettier/plugins/babel'), await import('prettier/plugins/estree')]; 
+      } else if (lang === 'xml') { 
+        showCustomAlert('info', 'Formatting', 'XML auto-formatting is not supported yet.'); 
+        return; 
+      } else if (!['javascript', 'typescript'].includes(lang)) {
         showCustomAlert('info', 'Formatting', 'Auto-formatting is best supported for HTML, CSS, JS, JSON.');
         return;
       }
+
       const formatted = await prettier.format(activeFile.content, { parser, plugins, tabWidth: 4, singleQuote: true, semi: true });
       handleCodeChange(formatted);
       showCustomAlert('success', 'Formatted!', `${activeFile.name} formatted successfully.`);
@@ -248,10 +257,9 @@ function App() {
   }, [activeFile, showCustomAlert]);
 
   // ==========================================
-  // ৫. ইউজ ইফেক্ট (useEffect Hooks) - এখন সব ফাংশন এর আগে ডিক্লেয়ার করা
+  // ৫. ইউজ ইফেক্ট (useEffect Hooks)
   // ==========================================
   
-  // সেটিংস লোড করা
   useEffect(() => {
     const loadSettings = async () => {
       const savedTheme = await localforage.getItem('techSystemTheme');
@@ -264,12 +272,10 @@ function App() {
     loadSettings();
   }, []);
 
-  // সেটিংস সেভ করা
   useEffect(() => { localforage.setItem('techSystemTheme', theme); }, [theme]);
   useEffect(() => { localforage.setItem('techSystemFontSize', fontSize); }, [fontSize]);
   useEffect(() => { localforage.setItem('techSystemRecentCmds', recentCommands); }, [recentCommands]);
 
-  // অনলাইন/অফলাইন স্ট্যাটাস
   useEffect(() => {
     const on = () => setOnline(true);
     const off = () => setOnline(false);
@@ -278,7 +284,6 @@ function App() {
     return () => { window.removeEventListener('online', on); window.removeEventListener('offline', off); };
   }, []);
 
-  // PWA ইন্সটল প্রম্পট হ্যান্ডলিং
   useEffect(() => {
     const handleBeforeInstallPrompt = (e) => {
       e.preventDefault();
@@ -289,7 +294,6 @@ function App() {
     return () => window.removeEventListener('beforeinstallprompt', handleBeforeInstallPrompt);
   }, []);
 
-  // ফাইল লোড করা
   useEffect(() => {
     const load = async () => {
       const hash = window.location.hash;
@@ -329,7 +333,6 @@ function App() {
     load();
   }, [showCustomAlert]);
 
-  // অটো সেভ (Localforage)
   useEffect(() => {
     if (files.length === 0) return;
     if (saveTimerRef.current) clearTimeout(saveTimerRef.current);
@@ -344,13 +347,11 @@ function App() {
     return () => { if (saveTimerRef.current) clearTimeout(saveTimerRef.current); };
   }, [files]);
 
-  // আনসেভড ডট ইন্ডিকেটর
   useEffect(() => {
     if (!activeFile) { setShowUnsavedDot(false); return; }
     setShowUnsavedDot(savedFilesMap[activeFile.id] !== activeFile.content);
   }, [files, activeFile, savedFilesMap]);
 
-  // কন্টেন্ট সার্চ
   useEffect(() => {
     if (searchMode !== 'content' || !searchQuery.trim()) {
       setSearchResults([]);
@@ -371,7 +372,7 @@ function App() {
     }, 250);
   }, [searchQuery, searchMode, files]);
 
-  // গ্লোবাল কী-বোর্ড শর্টকাট (এখন আর কোনো ReferenceError হবে না)
+  // গ্লোবাল কী-বোর্ড শর্টকাট (খুবই সেফ)
   useEffect(() => {
     const handler = (e) => {
       const mod = e.ctrlKey || e.metaKey;
@@ -389,7 +390,7 @@ function App() {
     };
     window.addEventListener('keydown', handler);
     return () => window.removeEventListener('keydown', handler);
-  }, [handleSaveToPhone, handleFormat, handleCreateNewFile]); // Dependency Array fix
+  }, [handleSaveToPhone, handleFormat, handleCreateNewFile]); 
 
   // ==========================================
   // ৬. বাকি হ্যান্ডলার ফাংশন (Other Handlers)
@@ -503,7 +504,6 @@ function App() {
     }
   };
 
-  // কপি/পেস্ট হ্যান্ডলার
   const handleCut = async () => {
     if (contextMenu.selectionText) {
       try {
@@ -542,7 +542,6 @@ function App() {
     setContextMenu(c => ({ ...c, visible: false }));
   };
 
-  // মোবাইল কিবোর্ড হেল্পার
   const safeRange = (sl, sc, el, ec) => {
     if (monacoRef.current?.Range) return new monacoRef.current.Range(sl, sc, el, ec);
     return { startLineNumber: sl, startColumn: sc, endLineNumber: el, endColumn: ec };
@@ -612,9 +611,6 @@ function App() {
     keepFocus();
   };
 
-  // ==========================================
-  // ৭. এডিটর মাউন্ট এবং থিম সেটআপ (Monaco Editor)
-  // ==========================================
   const handleEditorDidMount = (editor, monaco) => {
     editorRef.current = editor;
     monacoRef.current = monaco;
@@ -727,9 +723,6 @@ function App() {
     }
   };
 
-  // ==========================================
-  // ৮. প্রিভিউ কন্টেন্ট জেনারেটর
-  // ==========================================
   const getPreviewContent = useCallback(() => {
     if (activeFile?.language === 'xml' || activeFile?.name.endsWith('.xml')) {
       return `<!DOCTYPE html>
@@ -797,9 +790,6 @@ function App() {
     return () => window.removeEventListener('message', handleMessage);
   }, []);
 
-  // ==========================================
-  // ৯. কমান্ড প্যালেট ও অন্যান্য সেটআপ
-  // ==========================================
   const handleZenToggle = () => setZenMode(z => !z);
   const handlePreviewDevice = (device) => setPreviewDevice(device);
   const previewWidth = previewDevice === 'mobile' ? '375px' : previewDevice === 'tablet' ? '768px' : '100%';
@@ -869,9 +859,6 @@ function App() {
     setDraggedFileId(null);
   };
 
-  // ==========================================
-  // ১০. রেন্ডারিং (UI Rendering)
-  // ==========================================
   return (
     <div className={`app-container ${theme === 'vs-light' ? 'light-mode' : ''} ${zenMode ? 'zen-mode' : ''}`}>
       

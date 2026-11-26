@@ -1,4 +1,4 @@
-const CACHE_NAME = 'tech-system-v3.1.7';
+const CACHE_NAME = 'tech-system-v3.1.8';
 const CORE_ASSETS = ['/', '/index.html', '/manifest.json', '/logo.svg'];
 
 self.addEventListener('install', (e) => {
