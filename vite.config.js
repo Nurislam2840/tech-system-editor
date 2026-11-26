@@ -5,7 +5,6 @@ export default defineConfig({
   plugins: [react()],
   base: '/',
   build: {
-    outDir: 'dist',
-    sourcemap: false,
+    minify: false, // আপাতত মিনিফাই বন্ধ রাখুন
   },
 })

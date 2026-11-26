@@ -147,8 +147,108 @@ function App() {
   const activeFile = files.find(f => f.id === activeFileId);
   const filteredFiles = files.filter(f => f.name.toLowerCase().includes(searchQuery.toLowerCase()));
 
+  const flashSaved = () => {
+    setJustSaved(true);
+    if (savedIndicatorTimerRef.current) clearTimeout(savedIndicatorTimerRef.current);
+    savedIndicatorTimerRef.current = setTimeout(() => setJustSaved(false), 1500);
+  };
+
+  const keepFocus = () => { if (editorRef.current) editorRef.current.focus(); };
+
+  const handleCodeChange = useCallback((newCode) => {
+    setFiles(prev => prev.map(f => f.id === activeFileId ? { ...f, content: newCode ?? '' } : f));
+  }, [activeFileId]);
+
   // ==========================================
-  // ৪. ইউজ ইফেক্ট (useEffect Hooks)
+  // ৪. হ্যান্ডলার ফাংশন (Handlers) - useEffect এর আগে ডিক্লেয়ার করা হয়েছে
+  // ==========================================
+  
+  const handleCreateNewFile = useCallback(() => {
+    showCustomAlert('info', 'New File', 'Enter file name (e.g. script.py):', true, (fileName) => {
+      if (!fileName) return;
+      const newFile = { id: Date.now().toString(), name: fileName, language: getLanguage(fileName), content: '' };
+      setFiles(prev => [...prev, newFile]);
+      setActiveFileId(newFile.id);
+      setSidebarOpen(false);
+    });
+  }, [showCustomAlert]);
+
+  const handleFormat = useCallback(async () => {
+    if (!activeFile) return;
+    try {
+      const lang = activeFile.language;
+      let parser = 'babel';
+      let plugins = [parserBabel, parserEstree];
+      if (lang === 'html') { parser = 'html'; plugins = [parserHtml]; }
+      else if (lang === 'css') { parser = 'css'; plugins = [parserCss]; }
+      else if (lang === 'json') { parser = 'json'; plugins = [parserBabel, parserEstree]; }
+      else if (lang === 'markdown') { parser = 'markdown'; plugins = [parserBabel, parserEstree]; }
+      else if (lang === 'xml') { showCustomAlert('info', 'Formatting', 'XML auto-formatting is not supported yet.'); return; }
+      else if (!['javascript', 'typescript'].includes(lang)) {
+        showCustomAlert('info', 'Formatting', 'Auto-formatting is best supported for HTML, CSS, JS, JSON.');
+        return;
+      }
+      const formatted = await prettier.format(activeFile.content, { parser, plugins, tabWidth: 4, singleQuote: true, semi: true });
+      handleCodeChange(formatted);
+      showCustomAlert('success', 'Formatted!', `${activeFile.name} formatted successfully.`);
+    } catch (err) {
+      showCustomAlert('danger', 'Format Failed', err.message || 'Check syntax errors.');
+    }
+  }, [activeFile, handleCodeChange, showCustomAlert]);
+
+  const handleSaveToPhone = useCallback(async () => {
+    if (!activeFile) return;
+    
+    const fileName = activeFile.name;
+    const ext = fileName.split('.').pop().toLowerCase();
+
+    let mimeType = 'text/plain';
+    if (ext === 'html' || ext === 'htm') mimeType = 'text/html';
+    else if (ext === 'css') mimeType = 'text/css';
+    else if (ext === 'js' || ext === 'jsx') mimeType = 'application/javascript';
+    else if (ext === 'json') mimeType = 'application/json';
+    else if (ext === 'xml') mimeType = 'application/xml';
+
+    try {
+      if ('showSaveFilePicker' in window && window.isSecureContext) {
+        try {
+          const fileHandle = await window.showSaveFilePicker({
+            suggestedName: fileName,
+            types: [{ description: 'Code Files', accept: { [mimeType]: ['.' + ext] } }],
+          });
+          const writable = await fileHandle.createWritable();
+          await writable.write(activeFile.content);
+          await writable.close();
+          showCustomAlert('success', 'Saved!', 'File saved to your phone.');
+          flashSaved();
+          return;
+        } catch (err) {
+          if (err.name === 'AbortError') return;
+        }
+      }
+
+      const base64Content = btoa(unescape(encodeURIComponent(activeFile.content)));
+      const dataUri = `data:${mimeType};base64,${base64Content}`;
+      
+      const a = document.createElement('a');
+      a.href = dataUri;
+      a.download = fileName;
+      a.style.display = 'none';
+      document.body.appendChild(a);
+      a.click();
+      
+      setTimeout(() => { document.body.removeChild(a); }, 100);
+
+      showCustomAlert('success', 'Downloaded!', `${fileName} saved successfully.`);
+      flashSaved();
+
+    } catch (error) {
+      showCustomAlert('danger', 'Save Failed', 'Could not save file.');
+    }
+  }, [activeFile, showCustomAlert]);
+
+  // ==========================================
+  // ৫. ইউজ ইফেক্ট (useEffect Hooks) - এখন সব ফাংশন এর আগে ডিক্লেয়ার করা
   // ==========================================
   
   // সেটিংস লোড করা
@@ -183,13 +283,13 @@ function App() {
     const handleBeforeInstallPrompt = (e) => {
       e.preventDefault();
       setDeferredPrompt(e);
-      setTimeout(() => setShowInstallBanner(true), 5000); // ৫ সেকেন্ড পর দেখাবে
+      setTimeout(() => setShowInstallBanner(true), 5000);
     };
     window.addEventListener('beforeinstallprompt', handleBeforeInstallPrompt);
     return () => window.removeEventListener('beforeinstallprompt', handleBeforeInstallPrompt);
   }, []);
 
-  // ফাইল লোড করা (URL বা লোকাল স্টোরেজ থেকে)
+  // ফাইল লোড করা
   useEffect(() => {
     const load = async () => {
       const hash = window.location.hash;
@@ -250,7 +350,7 @@ function App() {
     setShowUnsavedDot(savedFilesMap[activeFile.id] !== activeFile.content);
   }, [files, activeFile, savedFilesMap]);
 
-  // কন্টেন্ট সার্চ (ফাইলের ভেতরে)
+  // কন্টেন্ট সার্চ
   useEffect(() => {
     if (searchMode !== 'content' || !searchQuery.trim()) {
       setSearchResults([]);
@@ -271,7 +371,7 @@ function App() {
     }, 250);
   }, [searchQuery, searchMode, files]);
 
-  // গ্লোবাল কী-বোর্ড শর্টকাট
+  // গ্লোবাল কী-বোর্ড শর্টকাট (এখন আর কোনো ReferenceError হবে না)
   useEffect(() => {
     const handler = (e) => {
       const mod = e.ctrlKey || e.metaKey;
@@ -289,12 +389,11 @@ function App() {
     };
     window.addEventListener('keydown', handler);
     return () => window.removeEventListener('keydown', handler);
-  }, [handleSaveToPhone, handleFormat, handleCreateNewFile]);
+  }, [handleSaveToPhone, handleFormat, handleCreateNewFile]); // Dependency Array fix
 
   // ==========================================
-  // ৫. হ্যান্ডলার ফাংশন (Handlers)
+  // ৬. বাকি হ্যান্ডলার ফাংশন (Other Handlers)
   // ==========================================
-  
   const handleInstallClick = async () => {
     if (!deferredPrompt) return;
     deferredPrompt.prompt();
@@ -304,69 +403,6 @@ function App() {
     }
     setDeferredPrompt(null);
   };
-
-  const handleCodeChange = useCallback((newCode) => {
-    setFiles(prev => prev.map(f => f.id === activeFileId ? { ...f, content: newCode ?? '' } : f));
-  }, [activeFileId]);
-
-  const flashSaved = () => {
-    setJustSaved(true);
-    if (savedIndicatorTimerRef.current) clearTimeout(savedIndicatorTimerRef.current);
-    savedIndicatorTimerRef.current = setTimeout(() => setJustSaved(false), 1500);
-  };
-
-  // ফাইল ফোনে সেভ করা (Base64 পদ্ধতি, .json সমস্যা ফিক্স)
-  const handleSaveToPhone = useCallback(async () => {
-    if (!activeFile) return;
-    
-    const fileName = activeFile.name;
-    const ext = fileName.split('.').pop().toLowerCase();
-
-    let mimeType = 'text/plain';
-    if (ext === 'html' || ext === 'htm') mimeType = 'text/html';
-    else if (ext === 'css') mimeType = 'text/css';
-    else if (ext === 'js' || ext === 'jsx') mimeType = 'application/javascript';
-    else if (ext === 'json') mimeType = 'application/json';
-    else if (ext === 'xml') mimeType = 'application/xml';
-
-    try {
-      if ('showSaveFilePicker' in window && window.isSecureContext) {
-        try {
-          const fileHandle = await window.showSaveFilePicker({
-            suggestedName: fileName,
-            types: [{ description: 'Code Files', accept: { [mimeType]: ['.' + ext] } }],
-          });
-          const writable = await fileHandle.createWritable();
-          await writable.write(activeFile.content);
-          await writable.close();
-          showCustomAlert('success', 'Saved!', 'File saved to your phone.');
-          flashSaved();
-          return;
-        } catch (err) {
-          if (err.name === 'AbortError') return;
-        }
-      }
-
-      // মোবাইলের জন্য Base64 Data URI
-      const base64Content = btoa(unescape(encodeURIComponent(activeFile.content)));
-      const dataUri = `data:${mimeType};base64,${base64Content}`;
-      
-      const a = document.createElement('a');
-      a.href = dataUri;
-      a.download = fileName;
-      a.style.display = 'none';
-      document.body.appendChild(a);
-      a.click();
-      
-      setTimeout(() => { document.body.removeChild(a); }, 100);
-
-      showCustomAlert('success', 'Downloaded!', `${fileName} saved successfully.`);
-      flashSaved();
-
-    } catch (error) {
-      showCustomAlert('danger', 'Save Failed', 'Could not save file.');
-    }
-  }, [activeFile, showCustomAlert]);
 
   const handleExportZip = async () => {
     const zip = new JSZip();
@@ -413,39 +449,6 @@ function App() {
       showCustomAlert('danger', 'Share Failed', 'Could not generate share link.');
     }
   };
-
-  const handleFormat = useCallback(async () => {
-    if (!activeFile) return;
-    try {
-      const lang = activeFile.language;
-      let parser = 'babel';
-      let plugins = [parserBabel, parserEstree];
-      if (lang === 'html') { parser = 'html'; plugins = [parserHtml]; }
-      else if (lang === 'css') { parser = 'css'; plugins = [parserCss]; }
-      else if (lang === 'json') { parser = 'json'; plugins = [parserBabel, parserEstree]; }
-      else if (lang === 'markdown') { parser = 'markdown'; plugins = [parserBabel, parserEstree]; }
-      else if (lang === 'xml') { showCustomAlert('info', 'Formatting', 'XML auto-formatting is not supported yet.'); return; }
-      else if (!['javascript', 'typescript'].includes(lang)) {
-        showCustomAlert('info', 'Formatting', 'Auto-formatting is best supported for HTML, CSS, JS, JSON.');
-        return;
-      }
-      const formatted = await prettier.format(activeFile.content, { parser, plugins, tabWidth: 4, singleQuote: true, semi: true });
-      handleCodeChange(formatted);
-      showCustomAlert('success', 'Formatted!', `${activeFile.name} formatted successfully.`);
-    } catch (err) {
-      showCustomAlert('danger', 'Format Failed', err.message || 'Check syntax errors.');
-    }
-  }, [activeFile, handleCodeChange, showCustomAlert]);
-
-  const handleCreateNewFile = useCallback(() => {
-    showCustomAlert('info', 'New File', 'Enter file name (e.g. script.py):', true, (fileName) => {
-      if (!fileName) return;
-      const newFile = { id: Date.now().toString(), name: fileName, language: getLanguage(fileName), content: '' };
-      setFiles(prev => [...prev, newFile]);
-      setActiveFileId(newFile.id);
-      setSidebarOpen(false);
-    });
-  }, [showCustomAlert]);
 
   const handleRenameFile = useCallback((id) => {
     const file = files.find(f => f.id === id);
@@ -540,7 +543,6 @@ function App() {
   };
 
   // মোবাইল কিবোর্ড হেল্পার
-  const keepFocus = () => { if (editorRef.current) editorRef.current.focus(); };
   const safeRange = (sl, sc, el, ec) => {
     if (monacoRef.current?.Range) return new monacoRef.current.Range(sl, sc, el, ec);
     return { startLineNumber: sl, startColumn: sc, endLineNumber: el, endColumn: ec };
@@ -611,13 +613,12 @@ function App() {
   };
 
   // ==========================================
-  // ৬. এডিটর মাউন্ট এবং থিম সেটআপ (Monaco Editor)
+  // ৭. এডিটর মাউন্ট এবং থিম সেটআপ (Monaco Editor)
   // ==========================================
   const handleEditorDidMount = (editor, monaco) => {
     editorRef.current = editor;
     monacoRef.current = monaco;
 
-    // নতুন প্রিমিয়াম কালার থিম (CodeX Palette)
     monaco.editor.defineTheme('tech-dark', {
       base: 'vs-dark',
       inherit: true,
@@ -626,23 +627,17 @@ function App() {
         { token: 'identifier', foreground: 'E2E8F0' },
         { token: 'delimiter', foreground: '94A3B8' },
         { token: 'comment', foreground: '64748B', fontStyle: 'italic' },
-
-        // HTML
         { token: 'tag', foreground: 'F472B6' },
         { token: 'metatag', foreground: 'F472B6' },
         { token: 'attribute.name', foreground: 'FBBF24' },
         { token: 'attribute.value', foreground: '34D399' },
         { token: 'delimiter.html', foreground: '38BDF8' },
-
-        // CSS
         { token: 'attribute.name.css', foreground: 'F472B6' },
         { token: 'attribute.value.css', foreground: '34D399' },
         { token: 'attribute.value.number.css', foreground: 'FB923C' },
         { token: 'attribute.value.unit.css', foreground: 'FB923C' },
         { token: 'attribute.value.hex.css', foreground: '38BDF8' },
         { token: 'tag.css', foreground: 'A78BFA' },
-
-        // JS
         { token: 'keyword', foreground: 'A78BFA' },
         { token: 'keyword.control', foreground: 'A78BFA' },
         { token: 'function', foreground: '60A5FA' },
@@ -680,7 +675,6 @@ function App() {
       else setSelectionInfo({ count: 0 });
     });
 
-    // কাস্টম কনটেক্সট মেনু লজিক
     const openContextMenu = (e, forceSelection = false) => {
       if (e && e.event) e.event.preventDefault();
       const selection = editor.getSelection();
@@ -734,7 +728,7 @@ function App() {
   };
 
   // ==========================================
-  // ৭. প্রিভিউ কন্টেন্ট জেনারেটর
+  // ৮. প্রিভিউ কন্টেন্ট জেনারেটর
   // ==========================================
   const getPreviewContent = useCallback(() => {
     if (activeFile?.language === 'xml' || activeFile?.name.endsWith('.xml')) {
@@ -804,7 +798,7 @@ function App() {
   }, []);
 
   // ==========================================
-  // ৮. কমান্ড প্যালেট ও অন্যান্য সেটআপ
+  // ৯. কমান্ড প্যালেট ও অন্যান্য সেটআপ
   // ==========================================
   const handleZenToggle = () => setZenMode(z => !z);
   const handlePreviewDevice = (device) => setPreviewDevice(device);
@@ -828,7 +822,6 @@ function App() {
     { id: 'undo', label: 'Undo', icon: <FiChevronsLeft />, action: () => { editorRef.current?.trigger('keyboard', 'undo'); keepFocus(); } },
     { id: 'redo', label: 'Redo', icon: <FiChevronsRight />, action: () => { editorRef.current?.trigger('keyboard', 'redo'); keepFocus(); } },
     { id: 'ai', label: 'AI Assistant (Coming Soon)', icon: <FiZap />, action: () => setShowAiPlaceholder(true) },
-    // eslint-disable-next-line
   ], [activeFile, handleCreateNewFile, handleFormat, handleSaveToPhone]);
 
   const filteredCommands = useMemo(() => {
@@ -877,12 +870,11 @@ function App() {
   };
 
   // ==========================================
-  // ৯. রেন্ডারিং (UI Rendering) - শুরু
+  // ১০. রেন্ডারিং (UI Rendering)
   // ==========================================
   return (
     <div className={`app-container ${theme === 'vs-light' ? 'light-mode' : ''} ${zenMode ? 'zen-mode' : ''}`}>
       
-      {/* হেডার সেকশন শুরু */}
       {!zenMode && (
         <header className="top-bar">
           <div className="logo">
@@ -917,7 +909,6 @@ function App() {
           </div>
         </header>
       )}
-      {/* হেডার সেকশন শেষ */}
 
       {zenMode && (
         <div className="zen-exit">
@@ -926,8 +917,6 @@ function App() {
       )}
 
       <main className="main-content">
-        
-        {/* সাইডবার সেকশন শুরু */}
         {!zenMode && (
           <aside className={`sidebar ${sidebarOpen ? 'open' : ''}`}>
             <div className="sidebar-header">
@@ -1046,11 +1035,9 @@ function App() {
             </ul>
           </aside>
         )}
-        {/* সাইডবার সেকশন শেষ */}
 
         {sidebarOpen && !zenMode && <div className="overlay" onClick={() => setSidebarOpen(false)}></div>}
 
-        {/* এডিটর সেকশন শুরু */}
         <section className="editor-section">
           {activeFile ? (
             <>
@@ -1107,7 +1094,6 @@ function App() {
 
               {!zenMode && (
                 <>
-                  {/* মোবাইল কিবোর্ড টুলবার */}
                   <div className="mobile-keyboard-toolbar">
                     <div className="toolbar-group">
                       <button onMouseDown={e => e.preventDefault()} onTouchStart={e => e.preventDefault()}
@@ -1123,7 +1109,6 @@ function App() {
                     </div>
                   </div>
 
-                  {/* স্নিপেট বার */}
                   <div className="snippet-bar">
                     {['()', '{}', '[]', '""', "''", ';', '=>', '${}', '/* */', '//', '<>', '</>'].map(s => (
                       <button key={s} onMouseDown={e => e.preventDefault()} onTouchStart={e => e.preventDefault()}
@@ -1146,9 +1131,7 @@ function App() {
             </div>
           )}
         </section>
-        {/* এডিটর সেকশন শেষ */}
 
-        {/* প্রিভিউ প্যানেল সেকশন শুরু */}
         {showPreview && (
           <div className="preview-panel">
             <div className="preview-header">
@@ -1204,11 +1187,8 @@ function App() {
             )}
           </div>
         )}
-        {/* প্রিভিউ প্যানেল সেকশন শেষ */}
-
       </main>
 
-      {/* কনটেক্সট মেনু সেকশন শুরু */}
       {contextMenu.visible && (
         <div className="custom-context-menu" style={{ top: contextMenu.y, left: contextMenu.x }}>
           {contextMenu.fileId && !contextMenu.hasSelection && (
@@ -1228,9 +1208,7 @@ function App() {
           <button onClick={handleSelectAll}><FiCode size={14} /> Select All</button>
         </div>
       )}
-      {/* কনটেক্সট মেনু সেকশন শেষ */}
 
-      {/* কমান্ড প্যালেট সেকশন শুরু */}
       {showCommandPalette && (
         <div className="modal-overlay" onClick={() => setShowCommandPalette(false)}>
           <div className="command-palette" onClick={e => e.stopPropagation()}>
@@ -1253,9 +1231,7 @@ function App() {
           </div>
         </div>
       )}
-      {/* কমান্ড প্যালেট সেকশন শেষ */}
 
-      {/* শর্টকাট মোডাল সেকশন শুরু */}
       {showShortcuts && (
         <div className="modal-overlay" onClick={() => setShowShortcuts(false)}>
           <div className="modal-content shortcuts-modal" onClick={e => e.stopPropagation()}>
@@ -1282,9 +1258,7 @@ function App() {
           </div>
         </div>
       )}
-      {/* শর্টকাট মোডাল সেকশন শেষ */}
 
-      {/* AI প্লেসহোল্ডার সেকশন শুরু */}
       {showAiPlaceholder && (
         <div className="modal-overlay" onClick={() => setShowAiPlaceholder(false)}>
           <div className="custom-alert-box" onClick={e => e.stopPropagation()}>
@@ -1297,9 +1271,7 @@ function App() {
           </div>
         </div>
       )}
-      {/* AI প্লেসহোল্ডার সেকশন শেষ */}
 
-      {/* অ্যালার্ট/প্রম্পট সেকশন শুরু */}
       {alertConfig.visible && (
         <div className="modal-overlay">
           <div className="custom-alert-box">
@@ -1324,9 +1296,7 @@ function App() {
           </div>
         </div>
       )}
-      {/* অ্যালার্ট/প্রম্পট সেকশন শেষ */}
 
-      {/* সেটিংস মোডাল সেকশন শুরু */}
       {showSettings && (
         <div className="modal-overlay">
           <div className="modal-content">
@@ -1361,9 +1331,7 @@ function App() {
           </div>
         </div>
       )}
-      {/* সেটিংস মোডাল সেকশন শেষ */}
 
-      {/* PWA ইন্সটল ব্যানার সেকশন শুরু */}
       {showInstallBanner && (
         <div className="install-banner">
           <div className="install-icon"><FiDownloadCloud size={24} /></div>
@@ -1375,9 +1343,7 @@ function App() {
           <button className="close-install" onClick={() => setShowInstallBanner(false)}><FiX size={16} /></button>
         </div>
       )}
-      {/* PWA ইন্সটল ব্যানার সেকশন শেষ */}
 
-      {/* স্ট্যাটাস বার সেকশন শুরু */}
       {!zenMode && (
         <footer className="status-bar">
           <div className="status-left">
@@ -1393,13 +1359,9 @@ function App() {
           </div>
         </footer>
       )}
-      {/* স্ট্যাটাস বার সেকশন শেষ */}
 
     </div>
   );
-  // ==========================================
-  // রেন্ডারিং (UI Rendering) - শেষ
-  // ==========================================
 }
 
 export default App;
